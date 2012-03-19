@@ -170,7 +170,7 @@ static int touchkey_update_status;
 #ifdef CONFIG_GENERIC_BLN
 static struct wake_lock bln_wake_lock;
 static bool touchkey_suspend = false;
-static DECLARE_MUTEX(bln_sem);
+static DEFINE_MUTEX(bln_sem);
 #endif
 
 #ifdef CONFIG_CM_BLN
@@ -188,7 +188,7 @@ static int cm_led_timeout = CM_BL_ALWAYS_OFF; /* never time out */
 static int cm_notification_timeout = -1; /* never time out */
 static int cm_notification_enabled = -1; /* Disabled by default */
 static struct wake_lock cm_led_wake_lock;
-static DECLARE_MUTEX(cm_enable_sem);
+static DEFINE_MUTEX(cm_enable_sem);
 
 /* timer related declares */
 static struct timer_list cm_led_timer;
@@ -904,7 +904,7 @@ static void melfas_enable_touchkey_backlights(void) {
 	int value;
 
 	printk(KERN_DEBUG "[TouchKey] %s\n", __func__);
-	down(&bln_sem);
+	mutex_lock(&bln_sem);
 	if (touchkey_suspend)
 	{
 		if (touchkey_enable == 0) {
@@ -916,14 +916,14 @@ static void melfas_enable_touchkey_backlights(void) {
 		touchkey_led_status = 2;
 		touchled_cmd_reversed = 1;
 	}
-	up(&bln_sem);
+	mutex_unlock(&bln_sem);
 }
 
 static void melfas_disable_touchkey_backlights(void) {
 	int value;
 
 	printk(KERN_DEBUG "[TouchKey] %s\n", __func__);
-	down(&bln_sem);
+	mutex_lock(&bln_sem);
 	if (touchkey_suspend)
 	{
 		value = touchkey_convert_led_value(2);
@@ -935,7 +935,7 @@ static void melfas_disable_touchkey_backlights(void) {
 		touchkey_led_status = 1;
 		touchled_cmd_reversed = 0;
 	}
-	up(&bln_sem);
+	mutex_unlock(&bln_sem);
 }
 
 static struct bln_implementation cypress_touchkey_bln = {
@@ -1050,7 +1050,7 @@ static ssize_t led_status_write( struct device *dev, struct device_attribute *at
 			printk(KERN_DEBUG "[LED] DISABLE_BL\n");
 
 			/* prevent race with late resume*/
-			down(&cm_enable_sem);
+			mutex_lock(&cm_enable_sem);
 
 			/* only do this if a notification is on already, do nothing if not */
 			if (cm_led_on == 1) {
@@ -1080,7 +1080,7 @@ static ssize_t led_status_write( struct device *dev, struct device_attribute *at
 			}
 
 			/* prevent race */
-			up(&cm_enable_sem);
+			mutex_unlock(&cm_enable_sem);
 
 			break;
 		}
@@ -1170,7 +1170,7 @@ static int sec_touchkey_early_suspend(struct early_suspend *h)
 	touchkey_enable = 0;
 
 #ifdef CONFIG_GENERIC_BLN
-	down(&bln_sem);
+	mutex_lock(&bln_sem);
 #endif
 
 	touchkey_enable = 0;
@@ -1183,7 +1183,7 @@ static int sec_touchkey_early_suspend(struct early_suspend *h)
 	if (touchkey_enable < 0) {
 		printk(KERN_DEBUG "[TouchKey] ---%s---touchkey_enable: %d\n", __func__, touchkey_enable);
 #ifdef CONFIG_GENERIC_BLN
-		up(&bln_sem);
+		mutex_unlock(&bln_sem);
 #endif
 		return 0;
 	}
@@ -1200,7 +1200,7 @@ static int sec_touchkey_early_suspend(struct early_suspend *h)
 	cm_screen_on = 0;
 #endif
 #ifdef CONFIG_GENERIC_BLN
-	up(&bln_sem);
+	mutex_unlock(&bln_sem);
 #endif
 	return 0;
 }
@@ -1211,11 +1211,11 @@ static int sec_touchkey_late_resume(struct early_suspend *h)
 	printk(KERN_DEBUG "[TouchKey] sec_touchkey_late_resume\n");
 
 #ifdef CONFIG_GENERIC_BLN
-	down(&bln_sem);
+	mutex_lock(&bln_sem);
 #endif
 #ifdef CONFIG_CM_BLN
 	/* Avoid race condition with LED notification disable */
-	down(&cm_enable_sem);
+	mutex_lock(&cm_enable_sem);
 #endif
 
 	/* enable ldo11 */
@@ -1224,10 +1224,10 @@ static int sec_touchkey_late_resume(struct early_suspend *h)
 	if (touchkey_enable < 0) {
 		printk(KERN_DEBUG "[TouchKey] ---%s---touchkey_enable: %d\n", __func__, touchkey_enable);
 #ifdef CONFIG_CM_BLN
-		up(&cm_enable_sem);
+		mutex_unlock(&cm_enable_sem);
 #endif
 #ifdef CONFIG_GENERIC_BLN
-		up(&bln_sem);
+		mutex_unlock(&bln_sem);
 #endif
 		return 0;
 	}
@@ -1294,7 +1294,7 @@ static int sec_touchkey_late_resume(struct early_suspend *h)
 
 #ifdef CONFIG_CM_BLN
 	/* Avoid race condition with LED notification disable */
-	up(&cm_enable_sem);
+	mutex_unlock(&cm_enable_sem);
 #endif
 
 	if (touchled_cmd_reversed) {
@@ -1307,7 +1307,7 @@ static int sec_touchkey_late_resume(struct early_suspend *h)
 	enable_irq(IRQ_TOUCH_INT);
 
 #ifdef CONFIG_GENERIC_BLN
-	up(&bln_sem);
+	mutex_unlock(&bln_sem);
 #endif
 	return 0;
 }
@@ -2036,7 +2036,7 @@ static int __init touchkey_init(void)
 		pr_err("Failed to create device file(%s)!\n", dev_attr_touch_sensitivity.attr.name);
 	}
 #ifdef CONFIG_GENERIC_BLN
-	if (device_create_file(touchkey_update_device.this_device, &dev_attr_touchkey_bln_control) < 0) {
+	if (device_create_file(sec_touchkey, &dev_attr_touchkey_bln_control) < 0) {
 		printk(KERN_ERR "%s device_create_file fail dev_attr_touchkey_bln_control\n", __func__);
 	}
 #endif
@@ -2087,6 +2087,7 @@ static void __exit touchkey_exit(void)
 	gpio_free(_3_TOUCH_SCL_28V);
 	gpio_free(_3_GPIO_TOUCH_EN);
 	gpio_free(_3_GPIO_TOUCH_INT);
+#endif
 }
 
 late_initcall(touchkey_init);
