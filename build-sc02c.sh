@@ -1,5 +1,7 @@
 #!/bin/sh
 
+export USE_SEC_FIPS_MODE=true
+
 echo "SC-02C KERNEL IMAGE BUILD START!!!"
 read -p "build? [(a)ll/(u)pdate/(z)Image default:update] " ANS
 
