@@ -8,3 +8,10 @@ config KEYBOARD_CYPRESS_TOUCH
 	  Say Y here to enable the cypress touchkey.
 
 	  To compile this driver as a module, choose M here.
+
+config CM_BLN
+       bool "Standard CyanogenMod LED Notification functionality"
+       default y
+       help
+         Say Y here to enable the backlight notification
+         for android led-notification (modified liblight needed)
