@@ -187,7 +187,7 @@ static DEFINE_MUTEX(bln_sem);
 
 static int cm_led_on = 0;
 static int cm_screen_on = 1;
-static int cm_led_timeout = CM_BL_ALWAYS_OFF; /* never time out */
+static int cm_led_timeout = CM_BL_ALWAYS_ON; /* never time out */
 static int cm_notification_timeout = -1; /* never time out */
 static int cm_notification_enabled = -1; /* Disabled by default */
 static struct wake_lock cm_led_wake_lock;
@@ -936,7 +936,7 @@ static void melfas_disable_touchkey_backlights(void) {
 			touchkey_bln_sleep();
 		}
 		touchkey_led_status = 1;
-		touchled_cmd_reversed = 0;
+		touchled_cmd_reversed = 1;
 	}
 	mutex_unlock(&bln_sem);
 }
