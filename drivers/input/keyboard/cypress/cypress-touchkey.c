@@ -50,7 +50,7 @@
 
 #ifdef CONFIG_GENERIC_BLN
 #include <linux/bln.h>
-#include <linux/spinlock.h>
+#include <linux/mutex.h>
 #endif
 #if defined(CONFIG_GENERIC_BLN) || defined(CONFIG_CM_BLN)
 #include <linux/wakelock.h>
@@ -167,6 +167,9 @@ static int store_module_version;
 
 static int touchkey_update_status;
 
+/*
+ * Generic LED Notification functionality.
+ */
 #ifdef CONFIG_GENERIC_BLN
 static struct wake_lock bln_wake_lock;
 static bool touchkey_suspend = false;
@@ -1167,17 +1170,12 @@ static int sec_touchkey_early_suspend(struct early_suspend *h)
 		input_report_key(touchkey_driver->input_dev, touchkey_keycode[i], 0);
 	}
 
-	touchkey_enable = 0;
-
 #ifdef CONFIG_GENERIC_BLN
 	mutex_lock(&bln_sem);
-#endif
-
-	touchkey_enable = 0;
-#ifdef CONFIG_GENERIC_BLN
 	touchkey_suspend = true;
 #endif
 
+	touchkey_enable = 0;
 	set_touchkey_debug('S');
 	printk(KERN_DEBUG "[TouchKey] sec_touchkey_early_suspend\n");
 	if (touchkey_enable < 0) {
@@ -1830,7 +1828,6 @@ static ssize_t set_touchkey_firm_version_read_show(struct device *dev, struct de
 
 	init_hw();
 	i2c_touchkey_read(KEYCODE_REG, data, 3);
-
 	count = sprintf(buf, "0x%x\n", data[1]);
 
 	printk(KERN_DEBUG "[TouchKey] touch_version_read 0x%x\n", data[1]);
