@@ -27,10 +27,14 @@ static int parse_text(char *src, int len)
 	char *sstart;
 	char *c;
 	unsigned int data1, data2;
+	unsigned int reg_mcm_mask_index, reg_mcm_cb_index, reg_mcm_cr_index;
+	unsigned int reg_de_sharpness_index, reg_de_threshold_index, reg_cs_gain_index;
 
 	c = src;
 	count = 0;
 	sstart = c;
+	reg_mcm_mask_index = reg_mcm_cb_index = reg_mcm_cr_index = 0;
+	reg_de_sharpness_index = reg_de_threshold_index = reg_cs_gain_index = 0;
 
 	for (i = 0; i < len; i++, c++) {
 		char a = *c;
@@ -56,8 +60,76 @@ static int parse_text(char *src, int len)
 		ret = sscanf(str_line[i], "0x%x,0x%x\n", &data1, &data2);
 		/* printk(KERN_INFO "Result => [0x%2x 0x%4x] %s\n", data1, data2, (ret == 2) ? "Ok" : "Not available"); */
 		if (ret == 2) {
-			mdnie_data[index++] = (unsigned short)data1;
-			mdnie_data[index++] = (unsigned short)data2;
+			if (mdnie_user_mode != 0x0000) {
+				switch (data1) {
+					case 0x0001:
+						data2 = mdnie_user_mode;
+						break;
+					case 0x0028: // register mask
+						if (mdnie_user_mode == 0x0045 || mdnie_user_mode == 0x0006) {
+							printk(KERN_INFO "mdnie_user_mcm_cb=0x%x, mdnie_user_mcm_cr=0x%x", mdnie_user_mcm_cb, mdnie_user_mcm_cr);
+							if (reg_mcm_mask_index) {
+								mdnie_data[reg_mcm_mask_index+1]  = 0x0064;
+							} else {
+								mdnie_data[index++] = 0x005b;
+								mdnie_data[index++] = 0x0064;
+							}
+							if (reg_mcm_cb_index) {
+								mdnie_data[reg_mcm_cb_index+1]  = mdnie_user_mcm_cb;
+							} else {
+								mdnie_data[index++] = 0x0063;
+								mdnie_data[index++] = mdnie_user_mcm_cb;
+							}
+							if (reg_mcm_cr_index) {
+								mdnie_data[reg_mcm_cr_index+1]  = mdnie_user_mcm_cr;
+							} else {
+								mdnie_data[index++] = 0x0065;
+								mdnie_data[index++] = mdnie_user_mcm_cr;
+							}
+						}
+						if (mdnie_user_de_control_enabled) {
+							if (reg_de_sharpness_index) {
+								// noop :mdnie_data[reg_de_sharpness_index+1]  = mdnie_user_de_sharpness;
+							} else {
+								mdnie_data[index++] = 0x003b;
+								mdnie_data[index++] = mdnie_user_de_sharpness;
+							}
+							if (reg_cs_gain_index) {
+								// noop : mdnie_data[reg_cs_gain_index+1]  = mdnie_user_cs_gain;
+							} else {
+								mdnie_data[index++] = 0x003f;
+								mdnie_data[index++] = mdnie_user_cs_gain;
+							}
+							if (reg_de_threshold_index) {
+								// noop : mDNIe_data[reg_de_threshold_index+1]  = mdnie_user_de_threshold;
+							} else {
+								mdnie_data[index++] = 0x0042;
+								mdnie_data[index++] = mdnie_user_de_threshold;
+							}
+						}
+						break;
+					case 0x005b: // MCM type
+						reg_mcm_mask_index = index;
+						break;
+					case 0x0063: // MCM cb
+						reg_mcm_cb_index = index;
+						break;
+					case 0x0065: // MCM cr
+						reg_mcm_cr_index = index;
+						break;
+					case 0x003b: // DE SHARPNESS
+						reg_de_sharpness_index = index;
+						break;
+					case 0x003f: // CS Gain
+						reg_cs_gain_index = index;
+						break;
+					case 0x0042: // DE TH
+						reg_de_threshold_index = index;
+						break;
+				}
+			}
+			mdnie_data[index++] = (u16)data1;
+			mdnie_data[index++] = (u16)data2;
 		}
 	}
 	return index;
