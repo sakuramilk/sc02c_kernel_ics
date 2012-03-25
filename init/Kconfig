@@ -901,13 +901,30 @@ source "usr/Kconfig"
 
 endif
 
+choice
+	prompt "Build Optimize"
+	default CC_OPTIMIZE_FOR_NORMAL
+	help
+	   This option select a build optimize.
+
 config CC_OPTIMIZE_FOR_SIZE
 	bool "Optimize for size"
 	help
 	  Enabling this option will pass "-Os" instead of "-O2" to gcc
 	  resulting in a smaller kernel.
 
-	  If unsure, say Y.
+config CC_OPTIMIZE_FOR_NORMAL
+	bool "Optimize for normal"
+	help
+	  Enabling this option will pass "-O2" to gcc
+	  resulting in a better size and speed kernel.
+
+config CC_OPTIMIZE_FOR_SPEED
+	bool "Optimize for speed"
+	help
+	  Enabling this option will pass "-O3" instead of "-O2" to gcc
+	  resulting in a good speed kernel.
+endchoice
 
 config CC_CHECK_WARNING_STRICTLY
 	bool "Check warnings more strictly"

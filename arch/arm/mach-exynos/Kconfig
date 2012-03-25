@@ -1456,3 +1456,56 @@ config BT_BCM4334
 	help
 	  Adds BCM4334 RFKILL driver for Broadcom BCM4334 chipset
 endif
+
+menu "CPUFreq overclock"
+config FREQ_OVERCLOCK
+	bool "Frequecy overclock"
+	default n
+	help
+	 This option makes to overclock frequecy.
+endmenu
+
+menu "Build target"
+choice
+	prompt "Build target"
+	default BUILD_TARGET_SAMSUNG
+	help
+	   This option select a build target.
+
+config BUILD_TARGET_SAMSUNG
+	bool "Samsung"
+	help
+	 This option makes to select build target Samsung ROM.
+
+config BUILD_TARGET_AOSP
+	bool "AOSP"
+        select FEATURE_AOSP
+	help
+	 This option makes to select build target AOSP ROM.
+
+config BUILD_TARGET_MULTI
+	bool "Multi"
+        select FEATURE_AOSP
+	help
+	 This option makes to select build target Multi ROM.
+endchoice
+
+
+config FEATURE_AOSP
+	bool "Enable AOSP feature support"
+	help
+	 This option enable AOSP freature support.
+
+endmenu
+
+config CM_KERNEL
+	bool "CyanogenMod kernel build"
+	default n
+	help
+	 This option makes to select CyanogenMod kernel build.
+
+config FEATURE_TGS2
+	bool "Enable TweakGS2 feature support"
+	default y
+	help
+	 This option enables TweakGS2 features support.

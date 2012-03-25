@@ -129,6 +129,22 @@ static char *static_command_line;
 static char *execute_command;
 static char *ramdisk_execute_command;
 
+#if defined(CONFIG_BUILD_TARGET_SAMSUNG)
+unsigned int kproc_build_target = 0;
+#elif defined(CONFIG_BUILD_TARGET_AOSP)
+unsigned int kproc_build_target = 1;
+#elif defined(CONFIG_BUILD_TARGET_MULTI)
+unsigned int kproc_build_target = 2;
+#else
+#error no defined build tartget
+#endif
+
+#if defined(CONFIG_FEATURE_AOSP)
+unsigned int kproc_feature_aosp = 1;
+#else
+unsigned int kproc_feature_aosp = 0;
+#endif
+
 /*
  * If set, this is an indication to the drivers that reset the underlying
  * device before going ahead with the initialization otherwise driver might

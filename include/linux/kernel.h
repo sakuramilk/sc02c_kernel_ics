@@ -739,4 +739,8 @@ extern int __build_bug_on_failed;
 /* To identify board information in panic logs, set this */
 extern char *mach_panic_string;
 
-#endif
+extern unsigned int kproc_build_target;
+extern unsigned int kproc_feature_aosp;
+#define FEATURE_AOSP_ENABLE	(kproc_feature_aosp)
+
+#endif /* _LINUX_KERNEL_H */
