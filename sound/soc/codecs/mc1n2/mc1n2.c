@@ -323,7 +323,7 @@ static int mc1n2_current_mode;
 static struct snd_soc_codec *mc1n2_codec;
 #endif
 
-#if defined(CONFIG_FEATURE_TGS2) && derfined(CONFIG_FREQ_OVERCLOCK)
+#if defined(CONFIG_FEATURE_TGS2) && defined(CONFIG_FREQ_OVERCLOCK)
 #include <mach/cpufreq.h>
 static int mc1n2_freq_lock = 0;
 #endif
@@ -4005,13 +4005,13 @@ static int mc1n2_hwdep_ioctl_notify(struct snd_soc_codec *codec,
 		mc1n2->pdata->set_adc_power_contraints(1);
 		break;
 	case MCDRV_NOTIFY_MEDIA_PLAY_START:
-#if defined(CONFIG_FEATURE_TGS2) && derfined(CONFIG_FREQ_OVERCLOCK)
+#if defined(CONFIG_FEATURE_TGS2) && defined(CONFIG_FREQ_OVERCLOCK)
 		if (mc1n2_freq_lock)
 			exynos_cpufreq_lock(DVFS_LOCK_ID_SND, L7); // CPU CLK lower lock 100MHz
 #endif
 		break;
 	case MCDRV_NOTIFY_MEDIA_PLAY_STOP:
-#if defined(CONFIG_FEATURE_TGS2) && derfined(CONFIG_FREQ_OVERCLOCK)
+#if defined(CONFIG_FEATURE_TGS2) && defined(CONFIG_FREQ_OVERCLOCK)
 		exynos_cpufreq_lock_free(DVFS_LOCK_ID_SND);
 #endif
 		break;
