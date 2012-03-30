@@ -1319,15 +1319,18 @@ static int m5mo_set_effect_color(struct v4l2_subdev *sd, int val)
 	}
 
 	switch (val) {
-	case IMAGE_EFFECT_NONE:
-		break;
-
 	case IMAGE_EFFECT_SEPIA:
 		cb = 0xD8;
 		cr = 0x18;
 		break;
 
 	case IMAGE_EFFECT_BNW:
+		cb = 0x00;
+		cr = 0x00;
+		break;
+
+	case IMAGE_EFFECT_NONE:
+	default:
 		cb = 0x00;
 		cr = 0x00;
 		break;
@@ -1368,6 +1371,10 @@ static int m5mo_set_effect_gamma(struct v4l2_subdev *sd, s32 val)
 
 	case IMAGE_EFFECT_AQUA:
 		effect = 0x08;
+		break;
+
+	default:
+		effect = 0x00;
 		break;
 	}
 

@@ -1326,6 +1326,7 @@ static void if_tag_stat_update(const char *ifname, uid_t uid,
 		new_tag_stat = create_if_tag_stat(iface_entry, uid_tag);
 		uid_tag_counters = &new_tag_stat->counters;
 	} else {
+		new_tag_stat = NULL;
 		uid_tag_counters = &tag_stat_entry->counters;
 	}
 
