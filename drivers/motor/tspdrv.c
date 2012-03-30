@@ -106,6 +106,16 @@ static int g_nMajor;
 #include "VibeOSKernelLinuxTime.c"
 #endif
 
+#ifdef CONFIG_FEATURE_TGS2
+#define VIBRATOR_LEVEL_MAX		9
+#define VIBRATOR_LEVEL_MIN		0
+#define VIBRATOR_LEVEL_DEFAULT	7
+#define VIBRATOR_DUTY_DEFAULT	40000
+static const int vibrator_duty_levels[] = { 26000, 28000, 30000, 32000, 34000, 36000, 38000, 40000, 42000, 44000 };
+static int vibrator_level = VIBRATOR_LEVEL_DEFAULT;
+int tspdrv_duty = VIBRATOR_DUTY_DEFAULT;
+#endif
+
 /* File IO */
 static int open(struct inode *inode, struct file *file);
 static int release(struct inode *inode, struct file *file);
@@ -123,6 +133,48 @@ static const struct file_operations fops = {
 	.release = release,
 	.llseek =	default_llseek
 };
+
+#ifdef CONFIG_FEATURE_TGS2
+/* sysfs */
+static ssize_t show_vibrator_level_max(struct device *dev,
+				      struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf,"%d\n", (ARRAY_SIZE(vibrator_duty_levels) - 1));
+}
+
+static ssize_t show_vibrator_level(struct device *dev,
+				      struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf,"%d\n", vibrator_level);
+}
+
+static ssize_t store_vibrator_level(struct device *dev,
+				       struct device_attribute *attr,
+				       const char *buf, size_t len)
+{
+	int data = 0;
+	if (sscanf(buf, "%u\n", &data) == 1) {
+		if (data >= ARRAY_SIZE(vibrator_duty_levels))
+			data = ARRAY_SIZE(vibrator_duty_levels) - 1;
+		else if (data < 0)
+			data = 0;
+		vibrator_level = data;
+
+		if (vibrator_level > VIBRATOR_LEVEL_MAX)
+			vibrator_level = VIBRATOR_LEVEL_MAX;
+		else if (vibrator_level < VIBRATOR_LEVEL_MIN)
+			vibrator_level = VIBRATOR_LEVEL_MIN;
+		tspdrv_duty = vibrator_duty_levels[vibrator_level];
+
+	} else {
+		printk(KERN_ERR "tspdrv: invalid vibrator level\n");
+	}
+	return len;
+}
+
+static DEVICE_ATTR(vibrator_level_max, S_IRUGO | S_IWUGO, show_vibrator_level_max, NULL);
+static DEVICE_ATTR(vibrator_level, S_IRUGO | S_IWUGO, show_vibrator_level, store_vibrator_level);
+#endif /* CONFIG_FEATURE_TGS2 */
 
 #ifndef IMPLEMENT_AS_CHAR_DRIVER
 static struct miscdevice miscdev = {
@@ -267,6 +319,16 @@ int init_module(void)
 	}
 
 	wake_lock_init(&vib_wake_lock, WAKE_LOCK_SUSPEND, "vib_present");
+
+#ifdef CONFIG_FEATURE_TGS2
+	if (device_create_file(&platdev.dev, &dev_attr_vibrator_level_max) < 0) {
+		printk(KERN_ERR "Failed to create device file(%s)!\n", dev_attr_vibrator_level_max.attr.name);
+	}
+	if (device_create_file(&platdev.dev, &dev_attr_vibrator_level) < 0) {
+		printk(KERN_ERR "Failed to create device file(%s)!\n", dev_attr_vibrator_level.attr.name);
+	}
+#endif
+
 	return 0;
 
 err_platform_drv_reg:

@@ -31,6 +31,11 @@ struct vibrator_drvdata {
 struct vibrator_drvdata *g_data;
 #endif
 
+#ifdef CONFIG_FEATURE_TGS2
+#define VIBRATOR_PERIOD		44138
+extern int tspdrv_duty;
+#endif
+
 static int vibetonz_clk_on(struct device *dev, bool en)
 {
 	struct clk *vibetonz_clk = NULL;
@@ -107,7 +112,11 @@ static void vibrator_work(struct work_struct *_work)
 			regulator_enable(data->regulator);
 		i2c_max8997_hapticmotor(data, true);
 		pwm_config(data->pwm,
+#ifdef CONFIG_FEATURE_TGS2
+			tspdrv_duty, VIBRATOR_PERIOD);
+#else
 			data->pdata->duty, data->pdata->period);
+#endif
 		pwm_enable(data->pwm);
 
 		data->running = true;
