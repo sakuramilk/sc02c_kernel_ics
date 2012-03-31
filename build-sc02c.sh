@@ -1,6 +1,7 @@
-#!/bin/sh
+#!/bin/bash
 
 export USE_SEC_FIPS_MODE=true
+CONFIG_FILE=$PWD/arch/arm/configs/$1
 
 echo "SC-02C KERNEL IMAGE BUILD START!!!"
 read -p "build? [(a)ll/(u)pdate/(z)Image default:update] " ANS
@@ -18,7 +19,8 @@ find /tmp/sc02c_initramfs -name .gitignore | xargs rm
 if [ "$ANS" = 'all' -o "$ANS" = 'a' ]; then
   echo "cleaning..."
   make clean
-  make $1
+  cp -f $CONFIG_FILE ./.config
+  make -C $PWD oldconfig || exit -1
 fi
 
 if [ "$ANS" != 'zImage' -a "$ANS" != 'z' ]; then
