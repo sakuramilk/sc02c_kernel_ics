@@ -31,6 +31,9 @@
 #include <plat/pm.h>
 #include <plat/cpu.h>
 
+/* UV */
+extern int exp_UV_mV[5];
+
 struct exynos_dvfs_info *exynos_info;
 
 static struct regulator *arm_regulator;
@@ -77,7 +80,7 @@ static unsigned int exynos_get_safe_armvolt(unsigned int old_index, unsigned int
 		if (exynos_info->need_apll_change(old_index, new_index) &&
 			(freq_table[new_index].frequency < exynos_info->mpll_freq_khz) &&
 			(freq_table[old_index].frequency < exynos_info->mpll_freq_khz)) {
-				safe_arm_volt = volt_table[exynos_info->pll_safe_idx];
+				safe_arm_volt = exp_UV_mV[exynos_info->pll_safe_idx];
 			}
 
 	}
@@ -132,7 +135,7 @@ static int exynos_target(struct cpufreq_policy *policy,
 
 	safe_arm_volt = exynos_get_safe_armvolt(old_index, index);
 
-	arm_volt = volt_table[index];
+	arm_volt = exp_UV_mV[index];
 
 	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 
@@ -278,7 +281,7 @@ int exynos_cpufreq_lock(unsigned int nId,
 			regulator_set_voltage(arm_regulator, safe_arm_volt,
 					     safe_arm_volt + 25000);
 
-		arm_volt = volt_table[cpufreq_level];
+		arm_volt = exp_UV_mV[cpufreq_level];
 		regulator_set_voltage(arm_regulator, arm_volt,
 				     arm_volt + 25000);
 
@@ -385,7 +388,7 @@ int exynos_cpufreq_upper_limit(unsigned int nId,
 			regulator_set_voltage(arm_regulator, safe_arm_volt,
 					     safe_arm_volt + 25000);
 
-		arm_volt = volt_table[cpufreq_level];
+		arm_volt = exp_UV_mV[cpufreq_level];
 		regulator_set_voltage(arm_regulator, arm_volt, arm_volt + 25000);
 
 		cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
@@ -473,7 +476,7 @@ static int exynos_cpufreq_notifier_event(struct notifier_block *this,
 				regulator_set_voltage(arm_regulator, safe_arm_volt,
 					safe_arm_volt + 25000);
 
-			arm_volt = volt_table[exynos_info->max_support_idx];
+			arm_volt = exp_UV_mV[exynos_info->max_support_idx];
 			regulator_set_voltage(arm_regulator, arm_volt,
 				arm_volt + 25000);
 

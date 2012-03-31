@@ -26,7 +26,7 @@ if [ "$ANS" != 'zImage' -a "$ANS" != 'z' ]; then
   if [ -e make.log ]; then
     mv make.log make_old.log
   fi
-  make -j4 2>&1 | tee make.log
+  make -j12 2>&1 | tee make.log
   if [ $? != 0 ]; then
     echo "NG make!!!"
     exit
