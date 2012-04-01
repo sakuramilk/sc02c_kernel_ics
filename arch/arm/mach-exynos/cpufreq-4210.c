@@ -23,7 +23,7 @@
 
 #include <plat/clock.h>
 
-#define CPUFREQ_LEVEL_END	L7
+#define CPUFREQ_LEVEL_END	L6
 
 static int max_support_idx;
 static int min_support_idx = (CPUFREQ_LEVEL_END - 1);
@@ -37,7 +37,7 @@ struct cpufreq_clkdiv {
 	unsigned int	clkdiv;
 };
 
-extern int exynos4210_volt_table[CPUFREQ_LEVEL_END];
+static unsigned int exynos4210_volt_table[CPUFREQ_LEVEL_END];
 
 static struct cpufreq_frequency_table exynos4210_freq_table[] = {
 	{L0, 1400*1000},
@@ -46,7 +46,6 @@ static struct cpufreq_frequency_table exynos4210_freq_table[] = {
 	{L3, 800*1000},
 	{L4, 500*1000},
 	{L5, 200*1000},
-	{L6, 100*1000},
 	{0, CPUFREQ_TABLE_END},
 };
 
@@ -57,7 +56,6 @@ static struct cpufreq_clkdiv exynos4210_clkdiv_table[] = {
 	{L3, 0},
 	{L4, 0},
 	{L5, 0},
-	{L6, 0},
 };
 
 static unsigned int clkdiv_cpu0[CPUFREQ_LEVEL_END][7] = {
@@ -83,9 +81,6 @@ static unsigned int clkdiv_cpu0[CPUFREQ_LEVEL_END][7] = {
 
 	/* ARM L5: 200MHz */
 	{ 0, 1, 3, 1, 3, 1, 0 },
-	
-	/* ARM L6: 100MHz */
-	{ 0, 1, 3, 1, 3, 1, 0 },
 };
 
 static unsigned int clkdiv_cpu1[CPUFREQ_LEVEL_END][2] = {
@@ -109,9 +104,6 @@ static unsigned int clkdiv_cpu1[CPUFREQ_LEVEL_END][2] = {
 
 	/* ARM L5: 200MHz */
 	{ 3, 0 },
-	
-	/* ARM L6: 100MHz */
-	{ 3, 0 },
 };
 
 static unsigned int exynos4_apll_pms_table[CPUFREQ_LEVEL_END] = {
@@ -132,9 +124,6 @@ static unsigned int exynos4_apll_pms_table[CPUFREQ_LEVEL_END] = {
 
 	/* APLL FOUT L5: 200MHz */
 	((200<<16)|(6<<8)|(0x3)),
-	
-	/* APLL FOUT L6: 100MHz */
-	((200<<16)|(6<<8)|(0x3)),
 };
 
 /*
@@ -150,7 +139,6 @@ static const unsigned int asv_voltage_A[CPUFREQ_LEVEL_END][8] = {
 	 * @800	 :	ASV_VOLTAGE_TABLE
 	 * @500  :
 	 * @200  :
-	 * @100	 :
 	 */
 	{ 0, 0, 0, 0, 0, 0, 0, 0 },
 	{ 1350000, 1350000, 1300000, 1275000, 1250000, 1225000, 1200000, 1175000 },
@@ -158,7 +146,6 @@ static const unsigned int asv_voltage_A[CPUFREQ_LEVEL_END][8] = {
 	{ 1200000, 1150000, 1100000, 1075000, 1050000, 1025000, 1000000, 975000 },
 	{ 1100000, 1050000, 1000000, 975000, 975000, 950000, 925000, 925000 },
 	{ 1050000, 1000000, 975000, 950000, 950000, 925000, 925000, 925000 },
-	{ 1025000, 1000000, 975000, 950000, 950000, 925000, 900000, 900000 },
 
 };
 
@@ -171,7 +158,6 @@ static const unsigned int asv_voltage_B[CPUFREQ_LEVEL_END][5] = {
 	 * @800	 :	ASV_VOLTAGE_TABLE
 	 * @500	 :
 	 * @200	 :
-	 * @100  :
 	 */
 	{ 1350000, 1350000, 1300000, 1250000, 1225000 },
 	{ 1325000, 1275000, 1225000, 1175000, 1150000 },
@@ -179,7 +165,6 @@ static const unsigned int asv_voltage_B[CPUFREQ_LEVEL_END][5] = {
 	{ 1150000, 1100000, 1050000, 1000000, 975000 },
 	{ 1050000, 1000000, 950000, 950000, 950000 },
 	{ 1025000, 975000, 950000, 950000, 950000 },
-	{ 1000000, 975000, 950000, 925000, 900000 },
 
 };
 
