@@ -32,7 +32,7 @@
 
 #include <trace/events/power.h>
 
-int exynos4210_volt_table[12];
+int exynos4210_volt_table[13];
 
 /**
  * The "cpufreq driver" - the arch- or hardware-dependent low
@@ -562,6 +562,7 @@ ssize_t show_UV_mV_table(struct cpufreq_policy *policy, char *buf) {
 	"1200mhz: %d mV\n\
 	1000mhz: %d mV\n\
 	800mhz: %d mV\n\
+	700mhz: %d mV\n\
 	600mhz: %d mV\n\
 	500mhz: %d mV\n\
 	400mhz: %d mV\n\
@@ -580,7 +581,8 @@ ssize_t show_UV_mV_table(struct cpufreq_policy *policy, char *buf) {
 	exynos4210_volt_table[8]/1000,
 	exynos4210_volt_table[9]/1000,
 	exynos4210_volt_table[10]/1000,
-	exynos4210_volt_table[11]/1000);
+	exynos4210_volt_table[11]/1000,
+	exynos4210_volt_table[12]/1000);
  
 }
 
@@ -589,39 +591,43 @@ ssize_t store_UV_mV_table(struct cpufreq_policy *policy,
 
 	unsigned int ret = -EINVAL;
 	int i = 0;
-	int u[11];
-	ret = sscanf(buf, "%d %d %d %d %d %d %d %d %d %d %d",
-	 &u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6], &u[7], &u[8], &u[9], &u[10]);
-	if(ret != 11) {
-		ret = sscanf(buf, "%d %d %d %d %d %d %d %d %d %d",
-		 &u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6], &u[7], &u[8], &u[9]);
-			if(ret != 10) {
-				ret = sscanf(buf, "%d %d %d %d %d %d %d %d %d",
-				 &u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6], &u[7], &u[8]);
-					if(ret != 9) {
-						ret = sscanf(buf, "%d %d %d %d %d %d %d %d",
-						 &u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6], &u[7]);
-							if(ret != 8) {
-								ret = sscanf(buf, "%d %d %d %d %d %d %d",
-								 &u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6]);
-									if(ret != 7) {
-										ret = sscanf(buf, "%d %d %d %d %d %d",
-								 		&u[0], &u[1], &u[2], &u[3], &u[4], &u[5]);
-											if(ret != 6) {
-												ret = sscanf(buf, "%d %d %d %d %d",
-									 	 		&u[0], &u[1], &u[2], &u[3], &u[4]);
-													if(ret != 5) {
-														ret = sscanf(buf, "%d %d %d %d",
-									 	 				&u[1], &u[2], &u[3], &u[4]);
-															if( ret != 4) return -EINVAL;
-													}
-											}	
-	  								}
+	int u[12];
+	ret = sscanf(buf, "%d %d %d %d %d %d %d %d %d %d %d %d",
+	 &u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6], &u[7], &u[8], &u[9], &u[10], &u[11]);
+	if(ret != 12) {
+		ret = sscanf(buf, "%d %d %d %d %d %d %d %d %d %d %d",
+		 &u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6], &u[7], &u[8], &u[9], &u[10]);
+			if(ret != 11) {
+				ret = sscanf(buf, "%d %d %d %d %d %d %d %d %d %d",
+				 &u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6], &u[7], &u[8], &u[9]);
+					if(ret != 10) {
+						ret = sscanf(buf, "%d %d %d %d %d %d %d %d %d",
+						 &u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6], &u[7], &u[8]);
+							if(ret != 9) {
+								ret = sscanf(buf, "%d %d %d %d %d %d %d %d",
+								 &u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6], &u[7]);
+									if(ret != 8) {
+										ret = sscanf(buf, "%d %d %d %d %d %d %d",
+									 	&u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6]);
+											if(ret != 7) {
+												ret = sscanf(buf, "%d %d %d %d %d %d",
+										 		&u[0], &u[1], &u[2], &u[3], &u[4], &u[5]);
+													if(ret != 6) {
+														ret = sscanf(buf, "%d %d %d %d %d",
+											 	 		&u[0], &u[1], &u[2], &u[3], &u[4]);
+															if(ret != 5) {
+																ret = sscanf(buf, "%d %d %d %d",
+											 	 				&u[1], &u[2], &u[3], &u[4]);
+																	if( ret != 4) return -EINVAL;
+															}
+													}	
+	  										}
+									}
 							}
 					}
 			}
 	}
-		for( i = 0; i < 11; i++ )
+		for( i = 0; i < 12; i++ )
 		{
 			if (u[i] > CPU_UV_MV_MAX / 1000)
 			{
@@ -633,7 +639,7 @@ ssize_t store_UV_mV_table(struct cpufreq_policy *policy,
 			}
 		}
 		
-		for( i = 0; i < 11; i++ )
+		for( i = 0; i < 12; i++ )
 		{
 			exynos4210_volt_table[i+1] = u[i] * 1000;
 		}

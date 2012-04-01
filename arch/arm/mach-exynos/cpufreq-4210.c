@@ -23,7 +23,7 @@
 
 #include <plat/clock.h>
 
-#define CPUFREQ_LEVEL_END	L12
+#define CPUFREQ_LEVEL_END	L13
 
 static int max_support_idx;
 static int min_support_idx = (CPUFREQ_LEVEL_END - 1);
@@ -44,14 +44,15 @@ static struct cpufreq_frequency_table exynos4210_freq_table[] = {
 	{L1, 1200*1000},
 	{L2, 1000*1000},
 	{L3, 800*1000},
-	{L4, 600*1000},
-	{L5, 500*1000},
-	{L6, 400*1000},
-	{L7, 300*1000},
-	{L8, 200*1000},
-	{L9, 100*1000},
-	{L10, 50*1000},
-	{L11, 25*1000},
+	{L4, 700*1000},
+	{L5, 600*1000},
+	{L6, 500*1000},
+	{L7, 400*1000},
+	{L8, 300*1000},
+	{L9, 200*1000},
+	{L10, 100*1000},
+	{L11, 50*1000},
+	{L12, 25*1000},
 	{0, CPUFREQ_TABLE_END},
 };
 
@@ -68,6 +69,7 @@ static struct cpufreq_clkdiv exynos4210_clkdiv_table[] = {
 	{L9, 0},
 	{L10, 0},
 	{L11, 0},
+	{L12, 0},
 };
 
 static unsigned int clkdiv_cpu0[CPUFREQ_LEVEL_END][7] = {
@@ -88,28 +90,31 @@ static unsigned int clkdiv_cpu0[CPUFREQ_LEVEL_END][7] = {
 	/* ARM L3: 800MHz */
 	{ 0, 3, 7, 3, 3, 1, 7 },
 
-	/* ARM L4: 600MHz */
+	/* ARM L4: 700MHz */
 	{ 0, 3, 7, 3, 3, 1, 7 },
 
-	/* ARM L5: 500MHz */
+	/* ARM L5: 600MHz */
 	{ 0, 3, 7, 3, 3, 1, 7 },
 
-	/* ARM L6: 400MHz */
+	/* ARM L6: 500MHz */
 	{ 0, 3, 7, 3, 3, 1, 7 },
 
-	/* ARM L7: 300MHz */
+	/* ARM L7: 400MHz */
 	{ 0, 3, 7, 3, 3, 1, 7 },
 
-	/* ARM L8: 200MHz */
+	/* ARM L8: 300MHz */
+	{ 0, 3, 7, 3, 3, 1, 7 },
+
+	/* ARM L9: 200MHz */
 	{ 0, 1, 3, 1, 3, 1, 0 },
 	
-	/* ARM L9: 100MHz */
+	/* ARM L10: 100MHz */
 	{ 0, 1, 3, 1, 3, 1, 0 },
 	
-	/* ARM L10: 50MHz */
+	/* ARM L11: 50MHz */
 	{ 0, 1, 3, 1, 3, 1, 0 },
 	
-	/* ARM L11: 25MHz */
+	/* ARM L12: 25MHz */
 	{ 0, 1, 3, 1, 3, 1, 0 },
 };
 
@@ -129,28 +134,31 @@ static unsigned int clkdiv_cpu1[CPUFREQ_LEVEL_END][2] = {
 	/* ARM L3: 800MHz */
 	{ 3, 0 },
 
-	/* ARM L4: 600MHz */
+	/* ARM L4: 700MHz */
 	{ 3, 0 },
 
-	/* ARM L5: 500MHz */
+	/* ARM L5: 600MHz */
 	{ 3, 0 },
 
-	/* ARM L6: 400MHz */
+	/* ARM L6: 500MHz */
 	{ 3, 0 },
 
-	/* ARM L7: 300MHz */
+	/* ARM L7: 400MHz */
 	{ 3, 0 },
 
-	/* ARM L8: 200MHz */
+	/* ARM L8: 300MHz */
+	{ 3, 0 },
+
+	/* ARM L9: 200MHz */
 	{ 3, 0 },
 	
-	/* ARM L9: 100MHz */
+	/* ARM L10: 100MHz */
 	{ 3, 0 },
 
-	/* ARM L10: 50MHz */
+	/* ARM L11: 50MHz */
 	{ 3, 0 },
 
-	/* ARM L11: 25MHz */
+	/* ARM L12: 25MHz */
 	{ 3, 0 },
 };
 
@@ -167,28 +175,31 @@ static unsigned int exynos4_apll_pms_table[CPUFREQ_LEVEL_END] = {
 	/* APLL FOUT L3: 800MHz */
 	((200<<16)|(6<<8)|(0x1)),
 
-	/* APLL FOUT L4: 600MHz */
+	/* APLL FOUT L4: 700MHz */
+	((175<<16)|(6<<8)|(0x1)),
+
+	/* APLL FOUT L5: 600MHz */
 	((150<<16)|(6<<8)|(0x1)),
 
-	/* APLL FOUT L5: 500MHz */
+	/* APLL FOUT L6: 500MHz */
 	((250<<16)|(6<<8)|(0x2)),
 
-	/* APLL FOUT L6: 400MHz */
+	/* APLL FOUT L7: 400MHz */
 	((200<<16)|(6<<8)|(0x2)),
 
-	/* APLL FOUT L7: 300MHz */
+	/* APLL FOUT L8: 300MHz */
 	((150<<16)|(6<<8)|(0x2)),
 
-	/* APLL FOUT L8: 200MHz */
+	/* APLL FOUT L9: 200MHz */
 	((200<<16)|(6<<8)|(0x3)),
 	
-	/* APLL FOUT L9: 100MHz */
+	/* APLL FOUT L10: 100MHz */
 	((100<<16)|(6<<8)|(0x3)),
 
-	/* APLL FOUT L10: 50MHz */
+	/* APLL FOUT L11: 50MHz */
 	((50<<16)|(6<<8)|(0x3)),
 
-	/* APLL FOUT L11: 25MHz */
+	/* APLL FOUT L12: 25MHz */
 	((25<<16)|(6<<8)|(0x3)),
 };
 
@@ -203,6 +214,7 @@ static const unsigned int asv_voltage_A[CPUFREQ_LEVEL_END][8] = {
 	 * @1200 :
 	 * @1000 :
 	 * @800	 :	ASV_VOLTAGE_TABLE
+	 * @700  :
 	 * @600  :	 
 	 * @500  :
 	 * @400  :
@@ -215,7 +227,8 @@ static const unsigned int asv_voltage_A[CPUFREQ_LEVEL_END][8] = {
 	{ 0, 0, 0, 0, 0, 0, 0, 0 },
 	{ 1350000, 1350000, 1300000, 1275000, 1250000, 1225000, 1200000, 1175000 },//1200MHz
 	{ 1300000, 1250000, 1200000, 1175000, 1150000, 1125000, 1100000, 1075000 },//1000MHz
-	{ 1200000, 1150000, 1100000, 1075000, 1050000, 1050000, 1000000,  975000 },//800MHz
+	{ 1200000, 1150000, 1100000, 1075000, 1050000, 1050000, 1050000, 1025000 },//800MHz
+	{ 1175000, 1150000, 1125000, 1100000, 1075000, 1050000, 1025000, 1000000 },//600MHz
 	{ 1150000, 1125000, 1100000, 1075000, 1050000, 1025000, 1000000,  975000 },//600MHz
 	{ 1125000, 1100000, 1075000, 1050000, 1025000, 1000000,  975000,  950000 },//500MHz
 	{ 1100000, 1075000, 1050000, 1025000, 1000000,  975000,  950000,  925000 },//400MHz
@@ -233,6 +246,7 @@ static const unsigned int asv_voltage_B[CPUFREQ_LEVEL_END][5] = {
 	 * @1200 :
 	 * @1000 :
 	 * @800	 :	ASV_VOLTAGE_TABLE
+	 * @700	 :
 	 * @600	 :
 	 * @500	 :
 	 * @400	 :
@@ -245,6 +259,7 @@ static const unsigned int asv_voltage_B[CPUFREQ_LEVEL_END][5] = {
 	{ 1350000, 1350000, 1300000, 1250000, 1225000 },//1200MHz
 	{ 1325000, 1275000, 1225000, 1175000, 1150000 },//1000MHz
 	{ 1225000, 1175000, 1125000, 1075000, 1050000 },//800MHz
+	{ 1100000, 1075000, 1050000, 1025000, 1000000 },//700MHz
 	{ 1075000, 1050000, 1025000, 1000000,  975000 },//600MHz
 	{ 1050000, 1025000, 1000000,  975000,  950000 },//500MHz
 	{ 1025000, 1000000,  975000,  950000,  925000 },//400MHz
