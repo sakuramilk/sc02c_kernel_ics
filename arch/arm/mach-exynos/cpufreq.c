@@ -126,6 +126,10 @@ static int exynos_target(struct cpufreq_policy *policy,
 	if (index == exynos_info->max_support_idx && old_index > 3)
 		index = 3;
 #endif
+/* prevent freqs going above max policy - netarchy */
+	while (exynos_info->freq_table[index].frequency > policy->max) {
+		index += 1;
+	}
 
 	freqs.new = freq_table[index].frequency;
 	freqs.cpu = policy->cpu;
@@ -490,6 +494,7 @@ static int exynos_cpufreq_notifier_event(struct notifier_block *this,
 
 static struct notifier_block exynos_cpufreq_notifier = {
 	.notifier_call = exynos_cpufreq_notifier_event,
+	.priority = INT_MIN, /* done last */
 };
 
 static int exynos_cpufreq_policy_notifier_call(struct notifier_block *this,
@@ -544,7 +549,11 @@ static int exynos_cpufreq_cpu_init(struct cpufreq_policy *policy)
 		cpumask_setall(policy->cpus);
 	}
 
-	return cpufreq_frequency_table_cpuinfo(policy, exynos_info->freq_table);
+	cpufreq_frequency_table_cpuinfo(policy, exynos_info->freq_table);
+	/* Safe default startup limits */
+	policy->max = 1200000;
+	policy->min = 200000;
+	return 0;
 }
 
 static int exynos_cpufreq_reboot_notifier_call(struct notifier_block *this,
@@ -645,3 +654,47 @@ err_vdd_arm:
 	return -EINVAL;
 }
 late_initcall(exynos_cpufreq_init);
+
+
+/* vdd_levels interface for TEGRAK OC compatibility - thx to gm */
+#define VREF_SEL     1	/* 0: 0.625V (50mV step), 1: 0.3125V (25mV step). */
+#define V_STEP       (25 * (2 - VREF_SEL)) /* Minimum voltage step size. */
+#define VREG_DATA    (VREG_CONFIG | (VREF_SEL << 5))
+#define VREG_CONFIG  (BIT(7) | BIT(6)) /* Enable VREG, pull-down if disabled. */
+/* Cause a compile error if the voltage is not a multiple of the step size. */
+#define MV(mv)      ((mv) / (!((mv) % V_STEP)))
+
+ssize_t acpuclk_get_vdd_levels_str(char *buf)
+{
+	int i, len = 0;
+	
+	if (buf)
+	{
+		for (i = exynos_info->max_support_idx; i<=exynos_info->min_support_idx; i++)
+		{
+			if(exynos_info->freq_table[i].frequency==CPUFREQ_ENTRY_INVALID) continue;
+				len += sprintf(buf + len, "%8u: %4d\n", exynos_info->freq_table[i].frequency, exynos_info->volt_table[i]);
+		}
+	}
+
+	return len;
+}
+
+void acpuclk_set_vdd(unsigned int khz, int vdd)
+{
+	int i;
+	unsigned int new_vdd;
+	vdd = vdd / V_STEP * V_STEP;
+	
+	for (i = exynos_info->max_support_idx; i<=exynos_info->min_support_idx; i++)
+	{
+		if(exynos_info->freq_table[i].frequency==CPUFREQ_ENTRY_INVALID) continue;
+		if (khz == 0)
+			new_vdd = min(max((unsigned int)(exynos_info->volt_table[i] + vdd), (unsigned int)CPU_UV_MV_MIN), (unsigned int)CPU_UV_MV_MAX);
+		else if (exynos_info->freq_table[i].frequency == khz)
+			new_vdd = min(max((unsigned int)vdd, (unsigned int)CPU_UV_MV_MIN), (unsigned int)CPU_UV_MV_MAX);
+		else continue;
+
+		exynos_info->volt_table[i] = new_vdd;
+	}
+}
