@@ -32,15 +32,6 @@
 
 #include <trace/events/power.h>
 
-/* UV */
-int exp_UV_mV[5] = {
-	1300000,
-	1200000,
-	1100000,
-	1000000,
-	 975000,
-};
-
 /**
  * The "cpufreq driver" - the arch- or hardware-dependent low
  * level driver of CPUFreq support, and its spinlock. This lock
@@ -562,43 +553,6 @@ static ssize_t show_scaling_setspeed(struct cpufreq_policy *policy, char *buf)
 	return policy->governor->show_setspeed(policy, buf);
 }
 
-/* sysfs interface for UV control */
-static ssize_t show_UV_mV_table(struct cpufreq_policy *policy, char *buf) {
-	return sprintf(buf,
-		"1200mhz: %d mV\n\
-		1000mhz: %d mV\n\
-		800mhz: %d mV\n\
-		500mhz: %d mV\n\
-		200mhz: %d mV\n",
-		exp_UV_mV[0]/1000,
-		exp_UV_mV[1]/1000,
-		exp_UV_mV[2]/1000,
-		exp_UV_mV[3]/1000,
-		exp_UV_mV[4]/1000);
-}
-
-static ssize_t store_UV_mV_table(struct cpufreq_policy *policy,
-		const char *buf, size_t count) {
-
-	unsigned int ret = -EINVAL;
-	int i = 0;
-	ret = sscanf(buf, "%d %d %d %d %d", 
-		&exp_UV_mV[0], &exp_UV_mV[1], &exp_UV_mV[2], &exp_UV_mV[3], &exp_UV_mV[4]);
-
-	if(ret !=5) {
-		return -EINVAL;
-	}
-	else
-		for( i = 0; i < 5; i++ )
-		{
-			if (exp_UV_mV[i] < 800) {
-				exp_UV_mV[i] =800;
-			}
-		exp_UV_mV[i] *= 1000;
-		}
-	return count;
-}
-
 /**
  * show_scaling_driver - show the current cpufreq HW/BIOS limitation
  */
@@ -628,8 +582,6 @@ cpufreq_freq_attr_rw(scaling_min_freq);
 cpufreq_freq_attr_rw(scaling_max_freq);
 cpufreq_freq_attr_rw(scaling_governor);
 cpufreq_freq_attr_rw(scaling_setspeed);
-/* UV table */
-cpufreq_freq_attr_rw(UV_mV_table);
 
 static struct attribute *default_attrs[] = {
 	&cpuinfo_min_freq.attr,
@@ -643,7 +595,6 @@ static struct attribute *default_attrs[] = {
 	&scaling_driver.attr,
 	&scaling_available_governors.attr,
 	&scaling_setspeed.attr,
-	&UV_mV_table.attr,
 	NULL
 };
 
@@ -990,17 +941,6 @@ static int cpufreq_add_dev(struct sys_device *sys_dev)
 		pr_debug("initialization failed\n");
 		goto err_unlock_policy;
 	}
-#ifdef CONFIG_HOTPLUG_CPU
-	for_each_online_cpu(sibling) {
-		struct cpufreq_policy *cp = per_cpu(cpufreq_cpu_data, sibling);
-		if (cp && cp->governor &&
-		    (cpumask_test_cpu(cpu, cp->related_cpus))) {
-			policy->min = cp->min;
-			policy->max = cp->max;
-			break;
-		}
-	}
-#endif
 	policy->user_policy.min = policy->min;
 	policy->user_policy.max = policy->max;
 
