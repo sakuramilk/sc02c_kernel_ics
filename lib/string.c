@@ -23,7 +23,6 @@
 #include <linux/string.h>
 #include <linux/ctype.h>
 #include <linux/module.h>
-#include <linux/memcopy.h>
 
 #ifndef __HAVE_ARCH_STRNICMP
 /**
@@ -597,11 +596,11 @@ EXPORT_SYMBOL(memset);
  */
 void *memcpy(void *dest, const void *src, size_t count)
 {
-	unsigned long dstp = (unsigned long)dest;
-	unsigned long srcp = (unsigned long)src;
-	
-	mem_copy_fwd(dstp, srcp, count);
-	
+	char *tmp = dest;
+	const char *s = src;
+
+	while (count--)
+		*tmp++ = *s++;
 	return dest;
 }
 EXPORT_SYMBOL(memcpy);
@@ -618,13 +617,21 @@ EXPORT_SYMBOL(memcpy);
  */
 void *memmove(void *dest, const void *src, size_t count)
 {
-	unsigned long dstp = (unsigned long)dest;
-	unsigned long srcp = (unsigned long)src;
-	
-	if (dest - src >= count) {
-		mem_copy_fwd(dstp, srcp, count);
+	char *tmp;
+	const char *s;
+
+	if (dest <= src) {
+		tmp = dest;
+		s = src;
+		while (count--)
+			*tmp++ = *s++;
 	} else {
-		mem_copy_bwd(dstp, srcp, count);
+		tmp = dest;
+		tmp += count;
+		s = src;
+		s += count;
+		while (count--)
+			*--tmp = *--s;
 	}
 	return dest;
 }
