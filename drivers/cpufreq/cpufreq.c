@@ -32,6 +32,8 @@
 
 #include <trace/events/power.h>
 
+int exynos4210_volt_table[7];
+
 /**
  * The "cpufreq driver" - the arch- or hardware-dependent low
  * level driver of CPUFreq support, and its spinlock. This lock
@@ -553,6 +555,50 @@ static ssize_t show_scaling_setspeed(struct cpufreq_policy *policy, char *buf)
 	return policy->governor->show_setspeed(policy, buf);
 }
 
+/* sysfs interface for UV control */
+ssize_t show_UV_mV_table(struct cpufreq_policy *policy, char *buf) {
+  
+  return sprintf(buf, "1200mhz: %d mV\n1000mhz: %d mV\n800mhz: %d mV\n500mhz: %d mV\n200mhz: %d mV\n100mhz: %d mV\n", exynos4210_volt_table[1]/1000, 
+					exynos4210_volt_table[2]/1000, exynos4210_volt_table[3]/1000, 
+					exynos4210_volt_table[4]/1000, exynos4210_volt_table[5]/1000, 
+					exynos4210_volt_table[6]/1000);
+ 
+}
+
+ssize_t store_UV_mV_table(struct cpufreq_policy *policy,
+                                      const char *buf, size_t count) {
+
+      unsigned int ret = -EINVAL;
+      int i = 0;
+	  int u[6];
+      ret = sscanf(buf, "%d %d %d %d %d %d", &u[0], &u[1], &u[2], &u[3], &u[4], &u[5]);
+	  if(ret != 6) {
+	      ret = sscanf(buf, "%d %d %d %d %d", &u[0], &u[1], &u[2], &u[3], &u[4]);
+		  if(ret != 5) {
+		      ret = sscanf(buf, "%d %d %d %d", &u[1], &u[2], &u[3], &u[4]);
+			  if( ret != 4) return -EINVAL;
+		  }
+	  }
+		for( i = 0; i < 6; i++ )
+		{
+			if (u[i] > CPU_UV_MV_MAX / 1000)
+			{
+				u[i] = CPU_UV_MV_MAX / 1000;
+			}
+			else if (u[i] < CPU_UV_MV_MIN / 1000)
+			{
+				u[i] = CPU_UV_MV_MIN / 1000;
+			}
+		}
+		
+		for( i = 0; i < 6; i++ )
+		{
+			exynos4210_volt_table[i+1] = u[i] * 1000;
+		}
+		
+	return count;
+}
+
 /**
  * show_scaling_driver - show the current cpufreq HW/BIOS limitation
  */
@@ -582,6 +628,8 @@ cpufreq_freq_attr_rw(scaling_min_freq);
 cpufreq_freq_attr_rw(scaling_max_freq);
 cpufreq_freq_attr_rw(scaling_governor);
 cpufreq_freq_attr_rw(scaling_setspeed);
+/* UV table */
+cpufreq_freq_attr_rw(UV_mV_table);
 
 static struct attribute *default_attrs[] = {
 	&cpuinfo_min_freq.attr,
@@ -595,6 +643,7 @@ static struct attribute *default_attrs[] = {
 	&scaling_driver.attr,
 	&scaling_available_governors.attr,
 	&scaling_setspeed.attr,
+	&UV_mV_table.attr,
 	NULL
 };
 
