@@ -23,7 +23,7 @@
 
 #include <plat/clock.h>
 
-#define CPUFREQ_LEVEL_END	L7
+#define CPUFREQ_LEVEL_END	L8
 
 static int max_support_idx;
 static int min_support_idx = (CPUFREQ_LEVEL_END - 1);
@@ -47,6 +47,7 @@ static struct cpufreq_frequency_table exynos4210_freq_table[] = {
 	{L4, 500*1000},
 	{L5, 200*1000},
 	{L6, 100*1000},
+	{L7, 50*1000},
 	{0, CPUFREQ_TABLE_END},
 };
 
@@ -58,6 +59,7 @@ static struct cpufreq_clkdiv exynos4210_clkdiv_table[] = {
 	{L4, 0},
 	{L5, 0},
 	{L6, 0},
+	{L7, 0},
 };
 
 static unsigned int clkdiv_cpu0[CPUFREQ_LEVEL_END][7] = {
@@ -112,6 +114,9 @@ static unsigned int clkdiv_cpu1[CPUFREQ_LEVEL_END][2] = {
 	
 	/* ARM L6: 100MHz */
 	{ 3, 0 },
+
+	/* ARM L7: 50MHz */
+	{ 3, 0 },
 };
 
 static unsigned int exynos4_apll_pms_table[CPUFREQ_LEVEL_END] = {
@@ -135,6 +140,9 @@ static unsigned int exynos4_apll_pms_table[CPUFREQ_LEVEL_END] = {
 	
 	/* APLL FOUT L6: 100MHz */
 	((100<<16)|(6<<8)|(0x3)),
+
+	/* APLL FOUT L7: 50MHz */
+	((50<<16)|(6<<8)|(0x3)),
 };
 
 /*
@@ -151,6 +159,7 @@ static const unsigned int asv_voltage_A[CPUFREQ_LEVEL_END][8] = {
 	 * @500  :
 	 * @200  :
 	 * @100	 :
+	 * @50	 :
 	 */
 	{ 0, 0, 0, 0, 0, 0, 0, 0 },
 	{ 1350000, 1350000, 1300000, 1275000, 1250000, 1225000, 1200000, 1175000 },
@@ -159,7 +168,7 @@ static const unsigned int asv_voltage_A[CPUFREQ_LEVEL_END][8] = {
 	{ 1100000, 1050000, 1000000, 975000, 975000, 950000, 925000, 925000 },
 	{ 1050000, 1000000, 975000, 950000, 950000, 925000, 925000, 925000 },
 	{ 1025000, 1000000, 975000, 950000, 950000, 925000, 900000, 900000 },
-
+	{ 1000000, 975000, 950000, 925000, 925000, 900000, 875000, 875000 },
 };
 
 static const unsigned int asv_voltage_B[CPUFREQ_LEVEL_END][5] = {
@@ -172,6 +181,7 @@ static const unsigned int asv_voltage_B[CPUFREQ_LEVEL_END][5] = {
 	 * @500	 :
 	 * @200	 :
 	 * @100  :
+	 * @50  :
 	 */
 	{ 1350000, 1350000, 1300000, 1250000, 1225000 },
 	{ 1325000, 1275000, 1225000, 1175000, 1150000 },
@@ -180,6 +190,7 @@ static const unsigned int asv_voltage_B[CPUFREQ_LEVEL_END][5] = {
 	{ 1050000, 1000000, 950000, 950000, 950000 },
 	{ 1025000, 975000, 950000, 950000, 950000 },
 	{ 1000000, 975000, 950000, 925000, 900000 },
+	{ 975000, 950000, 925000, 900000, 875000 },
 
 };
 
