@@ -32,14 +32,7 @@
 
 #include <trace/events/power.h>
 
-/* UV */
-int exp_UV_mV[5] = {
-	1300000,
-	1200000,
-	1100000,
-	1000000,
-	 975000,
-};
+int exynos4210_volt_table[7];
 
 /**
  * The "cpufreq driver" - the arch- or hardware-dependent low
@@ -563,39 +556,46 @@ static ssize_t show_scaling_setspeed(struct cpufreq_policy *policy, char *buf)
 }
 
 /* sysfs interface for UV control */
-static ssize_t show_UV_mV_table(struct cpufreq_policy *policy, char *buf) {
-	return sprintf(buf,
-		"1200mhz: %d mV\n\
-		1000mhz: %d mV\n\
-		800mhz: %d mV\n\
-		500mhz: %d mV\n\
-		200mhz: %d mV\n",
-		exp_UV_mV[0]/1000,
-		exp_UV_mV[1]/1000,
-		exp_UV_mV[2]/1000,
-		exp_UV_mV[3]/1000,
-		exp_UV_mV[4]/1000);
+ssize_t show_UV_mV_table(struct cpufreq_policy *policy, char *buf) {
+  
+  return sprintf(buf, "1200mhz: %d mV\n1000mhz: %d mV\n800mhz: %d mV\n500mhz: %d mV\n200mhz: %d mV\n100mhz: %d mV\n", exynos4210_volt_table[1]/1000, 
+					exynos4210_volt_table[2]/1000, exynos4210_volt_table[3]/1000, 
+					exynos4210_volt_table[4]/1000, exynos4210_volt_table[5]/1000, 
+					exynos4210_volt_table[6]/1000);
+ 
 }
 
-static ssize_t store_UV_mV_table(struct cpufreq_policy *policy,
-		const char *buf, size_t count) {
+ssize_t store_UV_mV_table(struct cpufreq_policy *policy,
+                                      const char *buf, size_t count) {
 
-	unsigned int ret = -EINVAL;
-	int i = 0;
-	ret = sscanf(buf, "%d %d %d %d %d", 
-		&exp_UV_mV[0], &exp_UV_mV[1], &exp_UV_mV[2], &exp_UV_mV[3], &exp_UV_mV[4]);
-
-	if(ret !=5) {
-		return -EINVAL;
-	}
-	else
-		for( i = 0; i < 5; i++ )
+      unsigned int ret = -EINVAL;
+      int i = 0;
+	  int u[6];
+      ret = sscanf(buf, "%d %d %d %d %d %d", &u[0], &u[1], &u[2], &u[3], &u[4], &u[5]);
+	  if(ret != 6) {
+	      ret = sscanf(buf, "%d %d %d %d %d", &u[0], &u[1], &u[2], &u[3], &u[4]);
+		  if(ret != 5) {
+		      ret = sscanf(buf, "%d %d %d %d", &u[1], &u[2], &u[3], &u[4]);
+			  if( ret != 4) return -EINVAL;
+		  }
+	  }
+		for( i = 0; i < 6; i++ )
 		{
-			if (exp_UV_mV[i] < 800) {
-				exp_UV_mV[i] =800;
+			if (u[i] > CPU_UV_MV_MAX / 1000)
+			{
+				u[i] = CPU_UV_MV_MAX / 1000;
 			}
-		exp_UV_mV[i] *= 1000;
+			else if (u[i] < CPU_UV_MV_MIN / 1000)
+			{
+				u[i] = CPU_UV_MV_MIN / 1000;
+			}
 		}
+		
+		for( i = 0; i < 6; i++ )
+		{
+			exynos4210_volt_table[i+1] = u[i] * 1000;
+		}
+		
 	return count;
 }
 
@@ -990,17 +990,6 @@ static int cpufreq_add_dev(struct sys_device *sys_dev)
 		pr_debug("initialization failed\n");
 		goto err_unlock_policy;
 	}
-#ifdef CONFIG_HOTPLUG_CPU
-	for_each_online_cpu(sibling) {
-		struct cpufreq_policy *cp = per_cpu(cpufreq_cpu_data, sibling);
-		if (cp && cp->governor &&
-		    (cpumask_test_cpu(cpu, cp->related_cpus))) {
-			policy->min = cp->min;
-			policy->max = cp->max;
-			break;
-		}
-	}
-#endif
 	policy->user_policy.min = policy->min;
 	policy->user_policy.max = policy->max;
 
