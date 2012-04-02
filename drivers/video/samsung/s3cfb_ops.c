@@ -111,8 +111,8 @@ int s3cfb_draw_logo(struct fb_info *fb)
 		printk(KERN_ERR "Fail to get 'bootloaderfb' from Bootloader. so we must set  this value as %d", bootloaderfb);
 	}
 
-	logo_virt_buf = phys_to_virt(bootloaderfb);
 #ifdef BOOT_LOGO_BYPASS
+	logo_virt_buf = phys_to_virt(bootloaderfb);
 	memcpy(fb->screen_base, logo_virt_buf, fb->var.yres * fb->fix.line_length);
 #else
 	memcpy(fb->screen_base, LOGO_RGB24, fb->var.yres * fb->fix.line_length);
