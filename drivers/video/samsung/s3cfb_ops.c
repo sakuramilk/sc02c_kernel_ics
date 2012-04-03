@@ -41,6 +41,8 @@
 
 #ifdef CONFIG_BOOT_LOGO_HOMUHOMU
 #include "logo_rgb24_homura.h"
+#elif CONFIG_BOOT_LOGO_WALPURGIS
+#include "logo_rgb24_walpurgis.h"
 #endif
 
 struct s3c_platform_fb *to_fb_plat(struct device *dev)
@@ -110,9 +112,9 @@ int s3cfb_draw_logo(struct fb_info *fb)
 		bootloaderfb = BOOT_FB_BASE_ADDR;
 		printk(KERN_ERR "Fail to get 'bootloaderfb' from Bootloader. so we must set  this value as %d", bootloaderfb);
 	}
+	logo_virt_buf = phys_to_virt(bootloaderfb);
 
 #ifdef BOOT_LOGO_BYPASS
-	logo_virt_buf = phys_to_virt(bootloaderfb);
 	memcpy(fb->screen_base, logo_virt_buf, fb->var.yres * fb->fix.line_length);
 #else
 	memcpy(fb->screen_base, LOGO_RGB24, fb->var.yres * fb->fix.line_length);

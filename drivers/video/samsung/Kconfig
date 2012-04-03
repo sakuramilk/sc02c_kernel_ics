@@ -253,4 +253,9 @@ config BOOT_LOGO_HOMUHOMU
 	---help---
 	  This homhom boot logo
 
+config BOOT_LOGO_WALPURGIS
+	bool "WALPURGIS"
+	---help---
+	  This homhom boot logo
+
 endchoice
