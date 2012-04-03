@@ -100,18 +100,42 @@ static int exynos_target(struct cpufreq_policy *policy,
 	if (exynos_cpufreq_disable)
 		goto out;
 
-	freqs.old = policy->cur;
+	freqs.old = exynos_getspeed(policy->cpu);
 
-	if (cpufreq_frequency_table_target(policy, freq_table,
-					   freqs.old, relation, &old_index)) {
-		ret = -EINVAL;
-		goto out;
+	if(policy->max < freqs.old || policy->min > freqs.old)
+	{
+		struct cpufreq_policy policytemp;
+		memcpy(&policytemp, policy, sizeof(struct cpufreq_policy));
+		if(policytemp.max < freqs.old)
+			policytemp.max = freqs.old;
+		if(policytemp.min > freqs.old)
+			policytemp.min = freqs.old;
+		if (cpufreq_frequency_table_target(&policytemp, freq_table,
+						   freqs.old, relation, &old_index)) {
+			ret = -EINVAL;
+			goto out;
+		}
+	} else
+	{
+		if (cpufreq_frequency_table_target(policy, freq_table,
+						   freqs.old, relation, &old_index)) {
+			ret = -EINVAL;
+			goto out;
+		}
 	}
 
 	if (cpufreq_frequency_table_target(policy, freq_table,
 					   target_freq, relation, &index)) {
 		ret = -EINVAL;
 		goto out;
+	}
+
+	/* prevent freqs going above max policy - netarchy */
+	/* Do this before lock checks or the locks won't behave - A. Dodd */
+	if (freq_table[index].frequency > policy->max) {
+		while (freq_table[index].frequency > policy-> max) {
+			index += 1;
+		}
 	}
 
 	/* Need to set performance limitation */
@@ -130,6 +154,7 @@ static int exynos_target(struct cpufreq_policy *policy,
 	while (exynos_info->freq_table[index].frequency > policy->max) {
 		index += 1;
 	}
+
 
 	freqs.new = freq_table[index].frequency;
 	freqs.cpu = policy->cpu;
@@ -573,6 +598,12 @@ static struct notifier_block exynos_cpufreq_reboot_notifier = {
 	.notifier_call = exynos_cpufreq_reboot_notifier_call,
 };
 
+/* Make sure we populate scaling_available_freqs in sysfs - netarchy */
+static struct freq_attr *exynos_cpufreq_attr[] = {
+  &cpufreq_freq_attr_scaling_available_freqs,
+  NULL,
+};
+
 static struct cpufreq_driver exynos_driver = {
 	.flags		= CPUFREQ_STICKY,
 	.verify		= exynos_verify_speed,
@@ -580,6 +611,7 @@ static struct cpufreq_driver exynos_driver = {
 	.get		= exynos_getspeed,
 	.init		= exynos_cpufreq_cpu_init,
 	.name		= "exynos_cpufreq",
+	.attr           = exynos_cpufreq_attr,
 #ifdef CONFIG_PM
 	.suspend	= exynos_cpufreq_suspend,
 	.resume		= exynos_cpufreq_resume,
