@@ -168,6 +168,12 @@ config CPU_FREQ_DEFAULT_GOV_INTELLIDEMAND
 	help
           Use the CPUFreq governor 'intellidemand' as default.
 
+config CPU_FREQ_DEFAULT_GOV_LAZY
+	bool "lazy"
+	select CPU_FREQ_GOV_LAZY
+	help
+          Use the CPUFreq governor 'lazy' as default.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -365,6 +371,10 @@ config CPU_FREQ_GOV_INTELLIDEMAND
 	depends on CPU_FREQ
 	help
 	  'intellidemand' - an intelligent ondemand governor
+
+config CPU_FREQ_GOV_LAZY
+        tristate "'lazy' cpufreq governor"
+        depends on CPU_FREQ
 
 config CPU_FREQ_DVFS_MONITOR
 	bool "dvfs monitor"
