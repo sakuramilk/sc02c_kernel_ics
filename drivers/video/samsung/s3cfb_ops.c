@@ -43,6 +43,8 @@
 #include "logo_rgb24_homura.h"
 #elif defined(CONFIG_BOOT_LOGO_WALPURGIS)
 #include "logo_rgb24_walpurgis.h"
+#elif defined(CONFIG_BOOT_LOGO_HUMMY)
+#include "logo_rgb24_hummy.h"
 #endif
 
 struct s3c_platform_fb *to_fb_plat(struct device *dev)

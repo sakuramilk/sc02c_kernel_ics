@@ -256,6 +256,11 @@ config BOOT_LOGO_HOMUHOMU
 config BOOT_LOGO_WALPURGIS
 	bool "WALPURGIS"
 	---help---
-	  This homhom boot logo
+	  This walpurgis boot logo
+
+config BOOT_LOGO_HUMMY
+	bool "HUMMY"
+	---help---
+	  This hummy boot logo
 
 endchoice
