@@ -402,6 +402,9 @@ extern struct cpufreq_governor cpufreq_gov_lazy;
 #elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_SAVAGEDZEN)
 extern struct cpufreq_governor cpufreq_gov_savagedzen;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_savagedzen)
+#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_SCARY)
+extern struct cpufreq_governor cpufreq_gov_scary;
+#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_scary)
 #endif
 
 
