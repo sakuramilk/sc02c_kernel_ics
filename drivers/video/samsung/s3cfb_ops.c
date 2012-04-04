@@ -39,9 +39,9 @@
 #define CMA_REGION_VIDEO	"fimd"
 #endif
 
-#ifdef CONFIG_BOOT_LOGO_HOMUHOMU
+#if defined(CONFIG_BOOT_LOGO_HOMUHOMU)
 #include "logo_rgb24_homura.h"
-#elif CONFIG_BOOT_LOGO_WALPURGIS
+#elif defined(CONFIG_BOOT_LOGO_WALPURGIS)
 #include "logo_rgb24_walpurgis.h"
 #endif
 
@@ -114,7 +114,7 @@ int s3cfb_draw_logo(struct fb_info *fb)
 	}
 	logo_virt_buf = phys_to_virt(bootloaderfb);
 
-#ifdef BOOT_LOGO_BYPASS
+#ifdef CONFIG_BOOT_LOGO_BYPASS
 	memcpy(fb->screen_base, logo_virt_buf, fb->var.yres * fb->fix.line_length);
 #else
 	memcpy(fb->screen_base, LOGO_RGB24, fb->var.yres * fb->fix.line_length);
