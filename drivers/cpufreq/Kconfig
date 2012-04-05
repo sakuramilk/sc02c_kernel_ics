@@ -201,6 +201,12 @@ config CPU_FREQ_DEFAULT_GOV_ONDEMANDX
 	  OndemandX has built in sleep profile, but not working Sysfs
 	  interface
 
+config CPU_FREQ_DEFAULT_GOV_SMARTASS2
+	bool "smartass2"
+	select CPU_FREQ_GOV_SMARTASS2
+	help
+	  Use the CPUFreq governor 'smartassV2' as default.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -442,6 +448,12 @@ config CPU_FREQ_GOV_ONDEMANDX_INPUT
 	help
 	  Enable installation of an input event handler which will ramp up the
 	  CPU to max frequency when an input event is received.
+
+config CPU_FREQ_GOV_SMARTASS2
+	tristate "'smartassV2' cpufreq governor"
+	depends on CPU_FREQ
+	help
+	  'smartassV2' - a "smart" optimized governor for the pyra!
 
 config CPU_FREQ_DVFS_MONITOR
 	bool "dvfs monitor"
