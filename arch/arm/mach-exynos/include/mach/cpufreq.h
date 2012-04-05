@@ -43,6 +43,9 @@ enum cpufreq_lock_ID {
 	DVFS_LOCK_ID_PEN,	/* E-PEN */
 	DVFS_LOCK_ID_G3D,	/* G3D */
 	DVFS_LOCK_ID_IR_LED,	/* IR_LED */
+#if defined(CONFIG_FEATURE_TGS2) && defined(CONFIG_FREQ_OVERCLOCK)
+	DVFS_LOCK_ID_SND,	/* SND */
+#endif
 	DVFS_LOCK_ID_END,
 };
 
