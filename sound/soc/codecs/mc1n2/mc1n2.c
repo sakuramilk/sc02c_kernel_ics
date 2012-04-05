@@ -4941,6 +4941,14 @@ static DEVICE_ATTR(freq_lock, S_IWUGO | S_IRUGO, mc1n2_show_freq_lock, mc1n2_sto
 #endif
 #endif /* CONFIG_FEATURE_TGS2 */
 
+void mc1n2_reboot(void)
+{
+	/* Force term */
+	_McDrv_Ctrl(MCDRV_TERM, NULL, 0);
+	/* Force MCLK OFF */
+	mc1n2_set_mclk_source(0);
+}
+
 /*
  * Module init and exit
  */
