@@ -181,11 +181,11 @@ config CPU_FREQ_DEFAULT_GOV_SAVAGEDZEN
           Use the CPUFreq governor 'savagedzen' as default.
 
 config CPU_FREQ_DEFAULT_GOV_SCARY
-    bool "scary"
-    select CPU_FREQ_GOV_SCARY
-    select CPU_FREQ_GOV_SCARY
-    help
-        Use the CPUFreq governor 'scary' as default
+	bool "scary"
+	select CPU_FREQ_GOV_SCARY
+	select CPU_FREQ_GOV_SCARY
+	help
+	  Use the CPUFreq governor 'scary' as default
 
 config CPU_FREQ_DEFAULT_GOV_ONDEMANDX
 	bool "ondemandx"
@@ -213,6 +213,16 @@ config CPU_FREQ_DEFAULT_GOV_BRAZILIANWAX
 	select CPU_FREQ_GOV_PERFORMANCE
 	help
 	  Use the CPUFreq governor 'brazilianwax as default.
+
+config CPU_FREQ_DEFAULT_GOV_INTERACTIVEX
+	bool "interactiveX"
+	select CPU_FREQ_GOV_INTERACTIVEX
+	help
+	  Use the CPUFreq governor 'interactiveX' as default. This allows
+	  you to get a full dynamic cpu frequency capable system by simply
+	  loading your cpufreq low-level hardware driver, using the
+	  'interactiveX' governor for latency-sensitive workloads.
+	  Has sleep profile.
 
 endchoice
 
@@ -468,6 +478,12 @@ config CPU_FREQ_GOV_BRAZILIANWAX
 	help
           'brazilianwax' - a "slightly more agressive smart" optimized governor!
 	  If in doubt, say Y.
+
+config CPU_FREQ_GOV_INTERACTIVEX
+	tristate "'interactiveX' cpufreq policy governor"
+	help
+	  'interactiveX' - This driver adds a dynamic cpufreq policy governor
+	  designed for latency-sensitive workloads.
 
 config CPU_FREQ_DVFS_MONITOR
 	bool "dvfs monitor"
