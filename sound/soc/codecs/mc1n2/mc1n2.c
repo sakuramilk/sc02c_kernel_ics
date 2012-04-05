@@ -4007,7 +4007,7 @@ static int mc1n2_hwdep_ioctl_notify(struct snd_soc_codec *codec,
 	case MCDRV_NOTIFY_MEDIA_PLAY_START:
 #if defined(CONFIG_FEATURE_TGS2) && defined(CONFIG_FREQ_OVERCLOCK)
 		if (mc1n2_freq_lock)
-			exynos_cpufreq_lock(DVFS_LOCK_ID_SND, L7); // CPU CLK lower lock 100MHz
+			exynos_cpufreq_lock(DVFS_LOCK_ID_SND, L15); // CPU CLK lower lock 100MHz
 #endif
 		break;
 	case MCDRV_NOTIFY_MEDIA_PLAY_STOP:
