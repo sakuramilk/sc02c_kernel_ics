@@ -1432,11 +1432,11 @@ static int i2c_touchkey_probe(struct i2c_client *client, const struct i2c_device
 	wake_lock_init(&cm_led_wake_lock, WAKE_LOCK_SUSPEND, "led_wake_lock");
 
 	/* turn on the LED if it is not supposed to be allways off */
-	if (cm_led_timeout != CM_BL_ALWAYS_OFF) {
-		int status = 1;
-        printk(KERN_ERR "[TouchKey] %d : %s(%d)\n", __LINE__, __func__, status);
-		i2c_touchkey_write((u8 *)&status, 1);
-	}
+	//if (cm_led_timeout != CM_BL_ALWAYS_OFF) {
+	//	int status = 1;
+	//	printk(KERN_ERR "[TouchKey] %d : %s(%d)\n", __LINE__, __func__, status);
+	//	i2c_touchkey_write((u8 *)&status, 1);
+	//}
 #endif /* CONFIG_CM_BLN */
 
 	return 0;
