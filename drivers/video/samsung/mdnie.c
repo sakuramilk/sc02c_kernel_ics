@@ -117,7 +117,7 @@ int mdnie_send_sequence(struct mdnie_info *mdnie, const unsigned short *seq)
 	s3c_mdnie_mask();
 
 	while (wbuf[i] != END_SEQ) {
-#ifdef CONFIG_FEATURE_TGS2
+#if 0//def CONFIG_FEATURE_TGS2
 		if (g_mdnie->user_mode != 0x0000) {
 			switch (wbuf[i]) {
 				case 0x0001:
