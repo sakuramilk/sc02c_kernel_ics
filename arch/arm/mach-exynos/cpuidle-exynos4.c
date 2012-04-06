@@ -34,6 +34,9 @@
 #include <plat/pm.h>
 #include <plat/devs.h>
 #include <plat/cpu.h>
+#ifdef CONFIG_SEC_WATCHDOG_RESET
+#include <plat/regs-watchdog.h>
+#endif
 #include <plat/usb-phy.h>
 #include <mach/regs-usb-phy.h>
 
@@ -366,6 +369,14 @@ static int exynos4_check_operation(void)
 	return 0;
 }
 
+#ifdef CONFIG_SEC_WATCHDOG_RESET
+static struct sleep_save exynos4_aftr_save[] = {
+	SAVE_ITEM(S3C2410_WTDAT),
+	SAVE_ITEM(S3C2410_WTCNT),
+	SAVE_ITEM(S3C2410_WTCON),
+};
+#endif
+
 static struct sleep_save exynos4_lpa_save[] = {
 	/* CMU side */
 	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_TOP),
@@ -378,6 +389,11 @@ static struct sleep_save exynos4_lpa_save[] = {
 	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_PERIL0),
 	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_PERIL1),
 	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_DMC),
+#ifdef CONFIG_SEC_WATCHDOG_RESET
+	SAVE_ITEM(S3C2410_WTDAT),
+	SAVE_ITEM(S3C2410_WTCNT),
+	SAVE_ITEM(S3C2410_WTCON),
+#endif
 };
 
 static struct sleep_save exynos4_aftr_save[] = {
@@ -458,6 +474,10 @@ static int exynos4_enter_core0_aftr(struct cpuidle_device *dev,
 	tmp = __raw_readl(S5P_CLKDIV_AUDSS);
 	tmp &= ~S5P_AUDSS_CLKDIV_RP_MASK;
 	__raw_writel(tmp, S5P_CLKDIV_AUDSS);
+
+#ifdef CONFIG_SEC_WATCHDOG_RESET
+	s3c_pm_do_save(exynos4_aftr_save, ARRAY_SIZE(exynos4_aftr_save));
+#endif
 
 	local_irq_disable();
 	do_gettimeofday(&before);
@@ -606,6 +626,11 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 	__raw_writel((1 << 28), S5P_PAD_RET_MMCB_OPTION);
 	__raw_writel((1 << 28), S5P_PAD_RET_EBIA_OPTION);
 	__raw_writel((1 << 28), S5P_PAD_RET_EBIB_OPTION);
+
+#ifdef CONFIG_SEC_WATCHDOG_RESET
+	s3c_pm_do_restore_core(exynos4_aftr_save,
+				ARRAY_SIZE(exynos4_aftr_save));
+#endif
 
 early_wakeup:
 	if ((exynos_result_of_asv > 3) && !soc_is_exynos4210())
