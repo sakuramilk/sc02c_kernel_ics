@@ -182,7 +182,7 @@ int dhd_write_rdwr_macaddr(struct ether_addr *mac)
 	mm_segment_t oldfs    = {0};
 	int ret = -1;
 
-	if ((g_imac_flag != MACADDR_COB) && (g_imac_flag != MACADDR_MOD))
+	if ((g_imac_flag != MACADDR_COB) /*&& (g_imac_flag != MACADDR_MOD)*/)
 		return 0;
 
 	sprintf(buf, "%02X:%02X:%02X:%02X:%02X:%02X\n",
@@ -339,7 +339,7 @@ int dhd_check_rdwr_macaddr(struct dhd_info *dhd, dhd_pub_t *dhdp,
 				(unsigned int *)&(mac->octet[5]));
 			/* Writing Newly generated MAC ID to the Dongle */
 			if (0 == _dhd_set_mac_address(dhd, 0, mac)) {
-				DHD_INFO(("%s: MACID is overwritten\n",
+				DHD_ERROR(("%s: MACID is overwritten\n",
 					__func__));
 				g_imac_flag = MACADDR_COB;
 			} else {
@@ -366,7 +366,7 @@ int dhd_check_rdwr_macaddr(struct dhd_info *dhd, dhd_pub_t *dhdp,
 			(unsigned int *)&(mac->octet[4]),
 			(unsigned int *)&(mac->octet[5]));
 		if (0 == _dhd_set_mac_address(dhd, 0, mac)) {
-			DHD_INFO(("%s: MACID is overwritten\n", __func__));
+			DHD_ERROR(("%s: MACID is overwritten\n", __func__));
 			g_imac_flag = MACADDR_COB;
 		} else {
 			DHD_ERROR(("%s: _dhd_set_mac_address() failed\n",

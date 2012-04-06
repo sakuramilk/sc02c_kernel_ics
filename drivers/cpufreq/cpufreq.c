@@ -659,7 +659,7 @@ ssize_t store_UV_mV_table(struct cpufreq_policy *policy,
 													&u[0], &u[1], &u[2], &u[3], &u[4]);
 														if(ret != 5) {
 														ret = sscanf(buf, "%d %d %d %d",
-														&u[1], &u[2], &u[3], &u[4]);
+														&u[0], &u[1], &u[2], &u[3]);
 															if(ret != 4) return -EINVAL;
 														}
 													}	
