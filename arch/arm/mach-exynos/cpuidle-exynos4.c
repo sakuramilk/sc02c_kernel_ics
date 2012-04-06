@@ -396,11 +396,11 @@ static struct sleep_save exynos4_lpa_save[] = {
 #endif
 };
 
-static struct sleep_save exynos4_aftr_save[] = {
-	/* CMU side */
-	SAVE_ITEM(S5P_CLKSRC_AUDSS),
-	SAVE_ITEM(S5P_CLKDIV_AUDSS),
-};
+//static struct sleep_save exynos4_aftr_save[] = {
+//	/* CMU side */
+//	SAVE_ITEM(S5P_CLKSRC_AUDSS),
+//	SAVE_ITEM(S5P_CLKDIV_AUDSS),
+//};
 
 static struct sleep_save exynos4_set_clksrc[] = {
 	{ .reg = EXYNOS4_CLKSRC_MASK_TOP			, .val = 0x00000001, },
