@@ -1,6 +1,9 @@
 #!/bin/bash
 
 export USE_SEC_FIPS_MODE=true
+export KBUILD_BUILD_USER="Homura"
+export KBUILD_BUILD_HOST="Milk"
+
 CONFIG_FILE=$PWD/arch/arm/configs/$1
 
 echo "SC-02C KERNEL IMAGE BUILD START!!!"
