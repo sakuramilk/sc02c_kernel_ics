@@ -29,10 +29,11 @@
 #include <linux/completion.h>
 #include <linux/mutex.h>
 #include <linux/syscore_ops.h>
+#include <linux/earlysuspend.h>
 
 #include <trace/events/power.h>
 
-int exynos4210_volt_table[19];
+int exynos4210_volt_table[18];
 
 /**
  * The "cpufreq driver" - the arch- or hardware-dependent low
@@ -364,7 +365,9 @@ show_one(cpuinfo_min_freq, cpuinfo.min_freq);
 show_one(cpuinfo_max_freq, cpuinfo.max_freq);
 show_one(cpuinfo_transition_latency, cpuinfo.transition_latency);
 show_one(scaling_min_freq, min);
+show_one(scaling_min_suspend_freq, min_suspend);
 show_one(scaling_max_freq, max);
+show_one(scaling_max_suspend_freq, max_suspend);
 show_one(scaling_cur_freq, cur);
 
 static int __cpufreq_set_policy(struct cpufreq_policy *data,
@@ -395,7 +398,9 @@ static ssize_t store_##file_name					\
 }
 
 store_one(scaling_min_freq, min);
+store_one(scaling_min_suspend_freq, min_suspend);
 store_one(scaling_max_freq, max);
+store_one(scaling_max_suspend_freq, max_suspend);
 
 /**
  * show_cpuinfo_cur_freq - current CPU frequency as detected by hardware
@@ -555,208 +560,85 @@ static ssize_t show_scaling_setspeed(struct cpufreq_policy *policy, char *buf)
 	return policy->governor->show_setspeed(policy, buf);
 }
 
-/* sysfs interface for UV control */
-ssize_t show_UV_mV_table(struct cpufreq_policy *policy, char *buf) {
-  
-  return sprintf(buf, 
-	"1600mhz: %d mV\n\
-	1500mhz: %d mV\n\
-	1400mhz: %d mV\n\
-	1300mhz: %d mV\n\
-	1200mhz: %d mV\n\
-	1100mhz: %d mV\n\
-	1000mhz: %d mV\n\
-	900mhz: %d mV\n\
-	800mhz: %d mV\n\
-	700mhz: %d mV\n\
-	600mhz: %d mV\n\
-	500mhz: %d mV\n\
-	400mhz: %d mV\n\
-	300mhz: %d mV\n\
-	200mhz: %d mV\n\
-	100mhz: %d mV\n\
-	50mhz: %d mV\n\
-	25mhz: %d mV\n",
-	exynos4210_volt_table[1]/1000, 
-	exynos4210_volt_table[2]/1000,
-	exynos4210_volt_table[3]/1000, 
-	exynos4210_volt_table[4]/1000,
-	exynos4210_volt_table[5]/1000,
-	exynos4210_volt_table[6]/1000,
-	exynos4210_volt_table[7]/1000,
-	exynos4210_volt_table[8]/1000,
-	exynos4210_volt_table[9]/1000,
-	exynos4210_volt_table[10]/1000,
-	exynos4210_volt_table[11]/1000,
-	exynos4210_volt_table[12]/1000,
-	exynos4210_volt_table[13]/1000,
-	exynos4210_volt_table[14]/1000,
-	exynos4210_volt_table[15]/1000,
-	exynos4210_volt_table[16]/1000,
-	exynos4210_volt_table[17]/1000,
-	exynos4210_volt_table[18]/1000);
- 
+static ssize_t show_UV_mV_table(struct cpufreq_policy *policy, char *buf) {
+
+      return sprintf(buf,
+"1600mhz: %d mV\n\
+1500mhz: %d mV\n\
+1400mhz: %d mV\n\
+1300mhz: %d mV\n\
+1200mhz: %d mV\n\
+1100mhz: %d mV\n\
+1000mhz: %d mV\n\
+900mhz: %d mV\n\
+800mhz: %d mV\n\
+700mhz: %d mV\n\
+600mhz: %d mV\n\
+500mhz: %d mV\n\
+400mhz: %d mV\n\
+300mhz: %d mV\n\
+200mhz: %d mV\n\
+100mhz: %d mV\n\
+50mhz: %d mV\n\
+25mhz: %d mV\n",
+		exynos4210_volt_table[0]/1000,
+		exynos4210_volt_table[1]/1000,
+		exynos4210_volt_table[2]/1000,
+		exynos4210_volt_table[3]/1000,
+		exynos4210_volt_table[4]/1000,
+		exynos4210_volt_table[5]/1000,
+		exynos4210_volt_table[6]/1000,
+		exynos4210_volt_table[7]/1000,
+		exynos4210_volt_table[8]/1000,
+		exynos4210_volt_table[9]/1000,
+		exynos4210_volt_table[10]/1000,
+		exynos4210_volt_table[11]/1000,
+		exynos4210_volt_table[12]/1000,
+		exynos4210_volt_table[13]/1000,
+		exynos4210_volt_table[14]/1000,
+		exynos4210_volt_table[15]/1000,
+		exynos4210_volt_table[16]/1000,
+		exynos4210_volt_table[17]/1000);
 }
 
-ssize_t store_UV_mV_table(struct cpufreq_policy *policy,
+static ssize_t store_UV_mV_table(struct cpufreq_policy *policy,
                                       const char *buf, size_t count) {
 
 	unsigned int ret = -EINVAL;
 	int i = 0;
-	int u[18];
 	ret = sscanf(buf, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
-	&u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6], &u[7], &u[8],
-	&u[9], &u[10], &u[11], &u[12], &u[13], &u[14], &u[15], &u[16], &u[17]);
+		&exynos4210_volt_table[0],
+		&exynos4210_volt_table[1],
+		&exynos4210_volt_table[2],
+		&exynos4210_volt_table[3],
+		&exynos4210_volt_table[4],
+		&exynos4210_volt_table[5],
+		&exynos4210_volt_table[6],
+		&exynos4210_volt_table[7],
+		&exynos4210_volt_table[8],
+		&exynos4210_volt_table[9],
+		&exynos4210_volt_table[10],
+		&exynos4210_volt_table[11],
+		&exynos4210_volt_table[12],
+		&exynos4210_volt_table[13],
+		&exynos4210_volt_table[14],
+		&exynos4210_volt_table[15],
+		&exynos4210_volt_table[16],
+		&exynos4210_volt_table[17]);
+
 	if(ret != 18) {
-	ret = sscanf(buf, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
-	&u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6], &u[7], &u[8],
-	&u[9], &u[10], &u[11], &u[12], &u[13], &u[14], &u[15], &u[16]);
-		if(ret != 17) {
-		ret = sscanf(buf, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
-		&u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6], &u[7], &u[8],
-		&u[9], &u[10], &u[11], &u[12], &u[13], &u[14], &u[15]);
-			if(ret != 16) {
-			ret = sscanf(buf, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
-			&u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6], &u[7],
-			&u[8], &u[9], &u[10], &u[11], &u[12], &u[13], &u[14]);
-				if(ret != 15) {
-				ret = sscanf(buf, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d",
-				&u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6], &u[7],
-				&u[8], &u[9], &u[10], &u[11], &u[12], &u[13]);
-					if(ret != 14) {
-					ret = sscanf(buf, "%d %d %d %d %d %d %d %d %d %d %d %d %d",
-					&u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6],
-					&u[7], &u[8], &u[9], &u[10], &u[11], &u[12]);
-						if(ret != 13) {
-						ret = sscanf(buf, "%d %d %d %d %d %d %d %d %d %d %d %d",
-						&u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6],
-						&u[7], &u[8], &u[9], &u[10], &u[11]);
-							if(ret != 12) {
-							ret = sscanf(buf, "%d %d %d %d %d %d %d %d %d %d %d",
-							&u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6],
-							&u[7], &u[8], &u[9], &u[10]);
-								if(ret != 11) {
-								ret = sscanf(buf, "%d %d %d %d %d %d %d %d %d %d",
-								&u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6],
-								&u[7],&u[8],&u[9]);
-									if(ret != 10) {
-									ret = sscanf(buf, "%d %d %d %d %d %d %d %d %d",
-									&u[0], &u[1], &u[2], &u[3], &u[4], &u[5], &u[6],
-									&u[7], &u[8]);
-										if(ret != 9) {
-										ret = sscanf(buf, "%d %d %d %d %d %d %d %d",
-										&u[0], &u[1], &u[2], &u[3], &u[4], &u[5],
-										&u[6], &u[7]);
-											if(ret != 8) {
-											ret = sscanf(buf, "%d %d %d %d %d %d %d",
-											&u[0], &u[1], &u[2], &u[3], &u[4], &u[5],
-											&u[6]);
-												if(ret != 7) {
-												ret = sscanf(buf, "%d %d %d %d %d %d",
-												&u[0], &u[1], &u[2], &u[3], &u[4], &u[5]);
-													if(ret != 6) {
-													ret = sscanf(buf, "%d %d %d %d %d",
-													&u[0], &u[1], &u[2], &u[3], &u[4]);
-														if(ret != 5) {
-														ret = sscanf(buf, "%d %d %d %d",
-														&u[0], &u[1], &u[2], &u[3]);
-															if(ret != 4) return -EINVAL;
-														}
-													}	
-	  											}
-											}
-										}
-									}
-								}
-							}
-						}
-					}
-				}
+		return -EINVAL;
+	} else {
+		for (i = 0; i < 18; i++) {
+			exynos4210_volt_table[i] *= 1000;
+
+			if (exynos4210_volt_table[i] > 1500000) {
+				exynos4210_volt_table[i] = 1500000;
+
+			} else if (exynos4210_volt_table[i] < 800000) {
+				exynos4210_volt_table[i] = 800000;
 			}
 		}
-	}
-		for( i = 0; i < 18; i++ )
-		{
-			if (u[i] > CPU_UV_MV_MAX / 1000)
-			{
-				u[i] = CPU_UV_MV_MAX / 1000;
-			}
-			else if (u[i] < CPU_UV_MV_MIN / 1000)
-			{
-				u[i] = CPU_UV_MV_MIN / 1000;
-			}
-		}
-		
-		for( i = 0; i < 18; i++ )
-		{
-			exynos4210_volt_table[i+1] = u[i] * 1000;
-		}
-		
-	return count;
-}
-
-/* vdd_levels interface for TEGRAK OC - thx to gm */
-
-extern ssize_t acpuclk_get_vdd_levels_str(char *buf);
-
-static ssize_t show_vdd_levels(struct cpufreq_policy *policy, char *buf)
-{
-	return acpuclk_get_vdd_levels_str(buf);
-}
-
-extern void acpuclk_set_vdd(unsigned acpu_khz, int vdd);
-
-static ssize_t store_vdd_levels(struct cpufreq_policy *policy, const char *buf, size_t count)
-{
-	int i = 0, j;
-	int pair[2] = { 0, 0 };
-	int sign = 0;
-	
-	if (count < 1)
-		return 0;
-	if (buf[0] == '-')
-	{
-		sign = -1;
-		i++;
-	}
-	else if (buf[0] == '+')
-	{
-		sign = 1;
-		i++;
-	}
-
-	for (j = 0; i < count; i++)
-	{
-		char c = buf[i];
-		if ((c >= '0') && (c <= '9'))
-		{
-			pair[j] *= 10;
-			pair[j] += (c - '0');
-		}
-		else if ((c == ' ') || (c == '\t'))
-		{
-			if (pair[j] != 0)
-			{
-				j++;
-				if ((sign != 0) || (j > 1))
-					break;
-			}
-		}
-		else
-			break;
-	}
-	
-	if (sign != 0)
-	{
-		if (pair[0] > 0)
-			acpuclk_set_vdd(0, sign * pair[0]);
-	}
-	else
-	{
-		if ((pair[0] > 0) && (pair[1] > 0))
-			acpuclk_set_vdd((unsigned)pair[0], pair[1]);
-		else
-			return -EINVAL;
 	}
 	return count;
 }
@@ -776,6 +658,11 @@ static ssize_t show_bios_limit(struct cpufreq_policy *policy, char *buf)
 	return sprintf(buf, "%u\n", policy->cpuinfo.max_freq);
 }
 
+extern ssize_t show_asv_group(struct cpufreq_policy *policy, char *buf);
+
+extern ssize_t store_asv_group(struct cpufreq_policy *policy,
+                                      const char *buf, size_t count);
+
 cpufreq_freq_attr_ro_perm(cpuinfo_cur_freq, 0400);
 cpufreq_freq_attr_ro(cpuinfo_min_freq);
 cpufreq_freq_attr_ro(cpuinfo_max_freq);
@@ -787,20 +674,22 @@ cpufreq_freq_attr_ro(bios_limit);
 cpufreq_freq_attr_ro(related_cpus);
 cpufreq_freq_attr_ro(affected_cpus);
 cpufreq_freq_attr_rw(scaling_min_freq);
+cpufreq_freq_attr_rw(scaling_min_suspend_freq);
 cpufreq_freq_attr_rw(scaling_max_freq);
+cpufreq_freq_attr_rw(scaling_max_suspend_freq);
 cpufreq_freq_attr_rw(scaling_governor);
 cpufreq_freq_attr_rw(scaling_setspeed);
-/* UV table */
 cpufreq_freq_attr_rw(UV_mV_table);
-/* vdd_levels */
-cpufreq_freq_attr_rw(vdd_levels);
+cpufreq_freq_attr_rw(asv_group);
 
 static struct attribute *default_attrs[] = {
 	&cpuinfo_min_freq.attr,
 	&cpuinfo_max_freq.attr,
 	&cpuinfo_transition_latency.attr,
 	&scaling_min_freq.attr,
+	&scaling_min_suspend_freq.attr,
 	&scaling_max_freq.attr,
+	&scaling_max_suspend_freq.attr,
 	&affected_cpus.attr,
 	&related_cpus.attr,
 	&scaling_governor.attr,
@@ -808,7 +697,7 @@ static struct attribute *default_attrs[] = {
 	&scaling_available_governors.attr,
 	&scaling_setspeed.attr,
 	&UV_mV_table.attr,
-	&vdd_levels.attr,
+	&asv_group.attr,
 	NULL
 };
 
@@ -1155,8 +1044,22 @@ static int cpufreq_add_dev(struct sys_device *sys_dev)
 		pr_debug("initialization failed\n");
 		goto err_unlock_policy;
 	}
+#ifdef CONFIG_HOTPLUG_CPU
+	for_each_online_cpu(sibling) {
+		struct cpufreq_policy *cp = per_cpu(cpufreq_cpu_data, sibling);
+		if (cp && cp->governor && (cpumask_test_cpu(cpu, cp->related_cpus))) {
+			policy->min = cp->min;
+			policy->min_suspend = cp->min_suspend;
+			policy->max = cp->max;
+			policy->max_suspend = cp->max_suspend;
+			break;
+		}
+	}
+#endif
 	policy->user_policy.min = policy->min;
+	policy->user_policy.min_suspend = policy->min_suspend;
 	policy->user_policy.max = policy->max;
+	policy->user_policy.max_suspend = policy->max_suspend;
 
 	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
 				     CPUFREQ_START, policy);
@@ -1856,10 +1759,14 @@ static int __cpufreq_set_policy(struct cpufreq_policy *data,
 			CPUFREQ_NOTIFY, policy);
 
 	data->min = policy->min;
+	data->min_suspend = policy->min_suspend;
 	data->max = policy->max;
+	data->max_suspend = policy->max_suspend;
 
-	pr_debug("new min and max freqs are %u - %u kHz\n",
-					data->min, data->max);
+	pr_debug("new min and max freqs are %u - %u kHz,\n	\
+		  min&max_suspend freqs are %u - %u kHz\n",
+				data->min, data->max,
+				data->min_suspend, data->max_suspend);
 
 	if (cpufreq_driver->setpolicy) {
 		data->policy = policy->policy;
@@ -1926,7 +1833,9 @@ int cpufreq_update_policy(unsigned int cpu)
 	pr_debug("updating policy for CPU %u\n", cpu);
 	memcpy(&policy, data, sizeof(struct cpufreq_policy));
 	policy.min = data->user_policy.min;
+	policy.min_suspend = data->user_policy.min_suspend;
 	policy.max = data->user_policy.max;
+	policy.max_suspend = data->user_policy.max_suspend;
 	policy.policy = data->user_policy.policy;
 	policy.governor = data->user_policy.governor;
 
@@ -2092,6 +2001,62 @@ int cpufreq_unregister_driver(struct cpufreq_driver *driver)
 }
 EXPORT_SYMBOL_GPL(cpufreq_unregister_driver);
 
+static void powersave_early_suspend(struct early_suspend *handler)
+{
+	int cpu;
+
+	for_each_online_cpu(cpu) {
+		struct cpufreq_policy *cpu_policy, new_policy;
+
+		cpu_policy = cpufreq_cpu_get(cpu);
+		if (!cpu_policy)
+			continue;
+		if (cpufreq_get_policy(&new_policy, cpu))
+			goto out;
+		new_policy.max = cpu_policy->max_suspend;
+		new_policy.min = cpu_policy->min_suspend;
+		printk(KERN_INFO
+			"%s: set cpu%d freq in the %u-%u KHz range\n",
+			__func__, cpu, new_policy.min, new_policy.max);
+		__cpufreq_set_policy(cpu_policy, &new_policy);
+		cpu_policy->user_policy.policy = cpu_policy->policy;
+		cpu_policy->user_policy.governor = cpu_policy->governor;
+out:
+		cpufreq_cpu_put(cpu_policy);
+	}
+}
+
+static void powersave_late_resume(struct early_suspend *handler)
+{
+	int cpu;
+
+	for_each_online_cpu(cpu) {
+		struct cpufreq_policy *cpu_policy, new_policy;
+
+		cpu_policy = cpufreq_cpu_get(cpu);
+		if (!cpu_policy)
+			continue;
+		if (cpufreq_get_policy(&new_policy, cpu))
+			goto out;
+		new_policy.max = cpu_policy->user_policy.max;
+		new_policy.min = cpu_policy->user_policy.min;
+		printk(KERN_INFO
+			"%s: set cpu%d freq in the %u-%u KHz range\n",
+			__func__, cpu, new_policy.min, new_policy.max);
+		__cpufreq_set_policy(cpu_policy, &new_policy);
+		cpu_policy->user_policy.policy = cpu_policy->policy;
+		cpu_policy->user_policy.governor = cpu_policy->governor;
+out:
+		cpufreq_cpu_put(cpu_policy);
+	}
+}
+
+static struct early_suspend _powersave_early_suspend = {
+	.suspend = powersave_early_suspend,
+	.resume = powersave_late_resume,
+	.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN,
+};
+
 static int __init cpufreq_core_init(void)
 {
 	int cpu;
@@ -2105,6 +2070,7 @@ static int __init cpufreq_core_init(void)
 						&cpu_sysdev_class.kset.kobj);
 	BUG_ON(!cpufreq_global_kobject);
 	register_syscore_ops(&cpufreq_syscore_ops);
+	register_early_suspend(&_powersave_early_suspend);
 
 	return 0;
 }
