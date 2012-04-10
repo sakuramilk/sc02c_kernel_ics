@@ -35,7 +35,7 @@ export USE_SEC_FIPS_MODE=true
 export LOCALVERSION="-$BUILD_LOCALVERSION"
 
 # set build user and host
-export KBUILD_BUILD_VERSION="ICS1"
+export KBUILD_BUILD_VERSION="1"
 export KBUILD_BUILD_USER="Homura"
 export KBUILD_BUILD_HOST="Milk"
 
