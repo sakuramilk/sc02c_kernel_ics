@@ -1,0 +1,7 @@
+HOW TO BUILD KERNEL
+
+  Execute build script
+    for samsung 'build-samsung.sh'
+    for AOSP 'build-aosp.sh'
+    for Multi boot 'build-multi.sh'.
+
