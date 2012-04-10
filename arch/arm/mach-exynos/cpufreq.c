@@ -577,7 +577,7 @@ static int exynos_cpufreq_cpu_init(struct cpufreq_policy *policy)
 	policy->max = 1200000;
 	policy->max_suspend = 500000;
 	policy->min = 200000;
-	policy->min_suspend = 200000;
+	policy->min_suspend = 100000;
 
 	return ret;
 }
