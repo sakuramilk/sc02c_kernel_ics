@@ -25,6 +25,8 @@
 #include <linux/gpio_keys.h>
 #include <linux/workqueue.h>
 #include <linux/gpio.h>
+//for checking home key delay by tegrak
+#include <linux/time.h>
 
 extern struct class *sec_class;
 
@@ -379,8 +381,23 @@ static struct attribute_group gpio_keys_attr_group = {
 	.attrs = gpio_keys_attrs,
 };
 
+// for caculating key delay by tegrak
+static inline u_int64_t ts_sub_to_ms(struct timespec dest, struct timespec src) {
+	u_int64_t result;
+
+	if (src.tv_sec > dest.tv_sec)
+		return 0;
+	if (src.tv_sec == dest.tv_sec && src.tv_nsec >= dest.tv_nsec)
+		return 0;
+
+	result = (dest.tv_sec - src.tv_sec) * MSEC_PER_SEC;
+	result += (dest.tv_nsec - src.tv_nsec) / NSEC_PER_MSEC;
+	return result;
+}
+
 static void gpio_keys_report_event(struct gpio_button_data *bdata)
 {
+	static struct timespec home_key_up_time = {0, 0};
 	struct gpio_keys_button *button = bdata->button;
 	struct input_dev *input = bdata->input;
 	unsigned int type = button->type ?: EV_KEY;
@@ -392,6 +409,18 @@ static void gpio_keys_report_event(struct gpio_button_data *bdata)
 			input_event(input, type, button->code, button->value);
 	} else {
 		bdata->key_state = !!state;
+
+		if (button->code == KEY_HOME || button->code == KEY_UP || button->code == KEY_DOWN) {
+			if (state) {
+				// we can't press this button again in 30ms! god finger? by tegrak
+				if (ts_sub_to_ms(current_kernel_time(), home_key_up_time) < 30) {
+					printk(KERN_ERR "Unintended home key repeatition. Ignore this action.");
+					return;
+				}
+			}
+		} else {
+			home_key_up_time = current_kernel_time();
+		}
 
 		input_event(input, type, button->code, irqd_is_wakeup_set(&desc->irq_data) ? 1 : !!state);
 	}
