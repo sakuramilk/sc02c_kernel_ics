@@ -18,6 +18,8 @@ cd $KERNEL_DIR
 read -p "select build type? [(r)elease/(n)ightly] " BUILD_TYPE
 if [ "$BUILD_TYPE" != 'release' -a "$BUILD_TYPE" != 'r' ]; then
   export NIGHTLY_BUILD=y
+else
+  unset NIGHTLY_BUILD
 fi
 
 # create release dir＿
