@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TOP_DIR=$PWD
+KERNEL_DIR=$PWD
 INITRAMFS_SRC_DIR=../sc02c_initramfs
 INITRAMFS_TMP_DIR=/tmp/sc02c_initramfs
 
@@ -16,6 +16,7 @@ cpoy_initramfs()
 
 
 # check target
+BUILD_TARGET=$1
 case "$BUILD_TARGET" in
   "AOSP" ) BUILD_DEFCONFIG=u1_sc02c_aosp_defconfig ;;
   "SAM" ) BUILD_DEFCONFIG=u1_sc02c_samsung_defconfig ;;
@@ -41,9 +42,12 @@ export KBUILD_BUILD_HOST="Milk"
 
 echo "=====> BUILD START $BUILD_KERNELVERSION-$BUILD_LOCALVERSION"
 
-echo ""
-read -p "select build? [(a)ll/(u)pdate/(z)Image default:update] " BUILD_SELECT
-
+if [ ! -n "$2" ]; then
+  echo ""
+  read -p "select build? [(a)ll/(u)pdate/(z)Image default:update] " BUILD_SELECT
+else
+  BUILD_SELECT=$2
+fi
 
 # copy initramfs
 echo ""
@@ -60,7 +64,7 @@ if [ "$BUILD_SELECT" = 'all' -o "$BUILD_SELECT" = 'a' ]; then
   make -C $PWD oldconfig || exit -1
 fi
 
-if [ "$ANS" != 'zImage' -a "$ANS" != 'z' ]; then
+if [ "$BUILD_SELECT" != 'zImage' -a "$BUILD_SELECT" != 'z' ]; then
   echo ""
   echo "=====> build start"
   if [ -e make.log ]; then
@@ -93,35 +97,36 @@ fi
 echo ""
 echo "=====> CREATE RELEASE IMAGE"
 # clean release dir
-rm $TOP_DIR/out/*
+rm $KERNEL_DIR/out/*
 
 # copy zImage
 cp arch/arm/boot/zImage ./out/
 echo "  out/zImage"
 
 # create odin image
-cd $TOP_DIR/out
+cd $KERNEL_DIR/out
 tar cf $BUILD_LOCALVERSION-odin.tar zImage
 md5sum -t $BUILD_LOCALVERSION-odin.tar >> $BUILD_LOCALVERSION-odin.tar
 mv $BUILD_LOCALVERSION-odin.tar $BUILD_LOCALVERSION-odin.tar.md5
 echo "  out/$BUILD_LOCALVERSION-odin.tar.md5"
 
 # create cwm image
-cd $TOP_DIR/out
+cd $KERNEL_DIR/out
 if [ -d tmp ]; then
   rm -rf tmp
 fi
 mkdir -p tmp/META-INF/com/google/android
 cp zImage ./tmp/
-cp $TOP_DIR/release-tools/update-binary $TOP_DIR/out/tmp/META-INF/com/google/android/
-sed -e "s/@VERSION/$BUILD_LOCALVERSION/g" $TOP_DIR/release-tools/updater-script.sed > $TOP_DIR/out/tmp/META-INF/com/google/android/updater-script
+cp $KERNEL_DIR/release-tools/update-binary $KERNEL_DIR/out/tmp/META-INF/com/google/android/
+sed -e "s/@VERSION/$BUILD_LOCALVERSION/g" $KERNEL_DIR/release-tools/updater-script.sed > $KERNEL_DIR/out/tmp/META-INF/com/google/android/updater-script
 cd tmp && zip -rq ../cwm.zip ./* && cd ../
-SIGNAPK_DIR=$TOP_DIR/release-tools/signapk
+SIGNAPK_DIR=$KERNEL_DIR/release-tools/signapk
 java -jar $SIGNAPK_DIR/signapk.jar $SIGNAPK_DIR/testkey.x509.pem $SIGNAPK_DIR/testkey.pk8 cwm.zip $BUILD_LOCALVERSION-signed.zip
 rm cwm.zip
 rm -rf tmp
 echo "  out/$BUILD_LOCALVERSION-signed.zip"
 
-cd $TOP_DIR
+cd $KERNEL_DIR
 echo ""
 echo "=====> BUILD COMPLETE $BUILD_KERNELVERSION-$BUILD_LOCALVERSION"
+exit 0

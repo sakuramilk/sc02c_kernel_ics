@@ -1,4 +1,3 @@
 #!/bin/bash
 
-export BUILD_TARGET="MULTI"
-./_build.sh
+./_build.sh "MULTI" $1

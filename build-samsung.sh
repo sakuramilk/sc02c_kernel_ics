@@ -1,4 +1,3 @@
 #!/bin/bash
 
-export BUILD_TARGET="SAMSUNG"
-./_build.sh
+./_build.sh "SAM" $1
