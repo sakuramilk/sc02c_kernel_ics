@@ -226,6 +226,8 @@ int exynos_cpufreq_lock(unsigned int nId,
 	struct cpufreq_policy *policy;
 	struct cpufreq_frequency_table *freq_table;
 
+        pr_info("[CPUFREQ] %s nId=%d level=%d", __func__, nId, cpufreq_level);
+
 	if (!exynos_cpufreq_init_done)
 		return -EPERM;
 
@@ -243,6 +245,10 @@ int exynos_cpufreq_lock(unsigned int nId,
 		printk(KERN_ERR "%s:Device [%d] already locked cpufreq\n",
 				__func__,  nId);
 		return 0;
+	}
+
+	if (DVFS_LOCK_ID_USER == nId) {
+		cpufreq_level += 4;
 	}
 
 	volt_table = exynos_info->volt_table;
@@ -343,6 +349,8 @@ int exynos_cpufreq_upper_limit(unsigned int nId,
 	unsigned int *volt_table;
 	struct cpufreq_policy *policy;
 	struct cpufreq_frequency_table *freq_table;
+
+        pr_info("[CPUFREQ] %s nId=%d level=%d", __func__, nId, cpufreq_level);
 
 	if (!exynos_cpufreq_init_done)
 		return -EPERM;
