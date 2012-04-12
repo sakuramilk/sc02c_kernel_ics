@@ -1563,10 +1563,11 @@ static int __devinit max8997_muic_probe(struct platform_device *pdev)
 	if (info->muic_data && gpio_is_valid(info->muic_data->gpio_usb_sel)) {
 		CHECK_GPIO(info->muic_data->gpio_usb_sel, "USB_SEL");
 
-		if (info->muic_data->cfg_uart_gpio)
+		if (info->muic_data->cfg_uart_gpio) {
 			info->muic_data->uart_path =
 				info->muic_data->cfg_uart_gpio();
-
+                    return 0;
+                }
 #ifndef CONFIG_TARGET_LOCALE_NA
 		ret = gpio_request(info->muic_data->gpio_usb_sel, "USB_SEL");
 		if (ret) {
