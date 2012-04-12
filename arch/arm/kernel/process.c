@@ -60,7 +60,7 @@ extern void setup_mm_for_reboot(char mode);
 
 static volatile int hlt_counter;
 
-#include <mach/system.h>
+#include <plat/system-reset.h>
 
 #ifdef CONFIG_SMP
 void arch_trigger_all_cpu_backtrace(void)
@@ -198,13 +198,17 @@ void cpu_idle_wait(void)
 EXPORT_SYMBOL_GPL(cpu_idle_wait);
 
 /*
- * This is our default idle handler.  We need to disable
- * interrupts here to ensure we don't miss a wakeup call.
+ * This is our default idle handler.
  */
+
+void (*arm_pm_idle)(void);
+
 static void default_idle(void)
 {
-	if (!need_resched())
-		arch_idle();
+	if (arm_pm_idle)
+		arm_pm_idle();
+	else
+		cpu_do_idle();
 	local_irq_enable();
 }
 
@@ -231,6 +235,10 @@ void cpu_idle(void)
 				cpu_die();
 #endif
 
+			/*
+			 * We need to disable interrupts here
+			 * to ensure we don't miss a wakeup call.
+			 */
 			local_irq_disable();
 #ifdef CONFIG_PL310_ERRATA_769419
 			wmb();
@@ -238,18 +246,17 @@ void cpu_idle(void)
 			if (hlt_counter) {
 				local_irq_enable();
 				cpu_relax();
-			} else {
+			} else if (!need_resched()) {
 				stop_critical_timings();
 				pm_idle();
 				start_critical_timings();
 				/*
-				 * This will eventually be removed - pm_idle
-				 * functions should always return with IRQs
-				 * enabled.
+				 * pm_idle functions must always
+				 * return with IRQs enabled.
 				 */
 				WARN_ON(irqs_disabled());
+			} else
 				local_irq_enable();
-			}
 		}
 		tick_nohz_restart_sched_tick();
 		idle_notifier_call_chain(IDLE_END);
