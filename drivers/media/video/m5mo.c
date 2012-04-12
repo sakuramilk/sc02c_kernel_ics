@@ -1376,10 +1376,6 @@ static int m5mo_set_effect_gamma(struct v4l2_subdev *sd, s32 val)
 	default:
 		effect = 0x00;
 		break;
-
-	default:
-		effect = 0x00;
-		break;
 	}
 
 	old_mode = m5mo_set_mode(sd, M5MO_PARMSET_MODE);
