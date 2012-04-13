@@ -1,21 +1,31 @@
-#
-# Genarate LOCALVERSION
-#
+###########################################################
+# set kernel version
+###########################################################
 TARGET_DEVICE=SC02C-ICS
 BUILD_MOD=HMRMLK
 BUILD_VERSION=V2.2.4
 
+
+###########################################################
+# set build user and host
+###########################################################
+export KBUILD_BUILD_VERSION="1"
+export KBUILD_BUILD_USER="Homura"
+export KBUILD_BUILD_HOST="Milk"
+
+
+
+###########################################################
+# don't edit
+###########################################################
 # nightly build
 if [ "$NIGHTLY_BUILD" = 'y' ]; then
   BUILD_VERSION=`date +%Y%m%d`
 fi
-
 export BUILD_LOCALVERSION="$TARGET_DEVICE-$BUILD_MOD-$BUILD_VERSION-$BUILD_TARGET"
-
 
 # kernel vesion
 KERNEL_VERSION=`grep '^VERSION = ' ./Makefile | cut -d' ' -f3`
 KERNEL_PATCHLEVEL=`grep '^PATCHLEVEL = ' ./Makefile | cut -d' ' -f3`
 KERNEL_SUBLEVEL=`grep '^SUBLEVEL = ' ./Makefile | cut -d' ' -f3`
-
 export BUILD_KERNELVERSION="$KERNEL_VERSION.$KERNEL_PATCHLEVEL.$KERNEL_SUBLEVEL"

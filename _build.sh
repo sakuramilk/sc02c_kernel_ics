@@ -35,11 +35,6 @@ export CROSS_COMPILE=/opt/toolchains/arm-2011.03/bin/arm-none-eabi-
 export USE_SEC_FIPS_MODE=true
 export LOCALVERSION="-$BUILD_LOCALVERSION"
 
-# set build user and host
-export KBUILD_BUILD_VERSION="1"
-export KBUILD_BUILD_USER="Homura"
-export KBUILD_BUILD_HOST="Milk"
-
 echo "=====> BUILD START $BUILD_KERNELVERSION-$BUILD_LOCALVERSION"
 
 if [ ! -n "$2" ]; then
