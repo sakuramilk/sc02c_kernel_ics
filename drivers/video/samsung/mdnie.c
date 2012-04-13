@@ -101,9 +101,6 @@ int mdnie_send_sequence(struct mdnie_info *mdnie, const unsigned short *seq)
 {
 	int ret = 0, i = 0;
 	const unsigned short *wbuf;
-#ifdef CONFIG_FEATURE_TGS2
-	unsigned short mode = 0;
-#endif
 
 	if (!mdnie->enable) {
 		dev_err(mdnie->dev, "do not configure mDNIe after LCD/mDNIe power off\n");
@@ -117,30 +114,13 @@ int mdnie_send_sequence(struct mdnie_info *mdnie, const unsigned short *seq)
 	s3c_mdnie_mask();
 
 	while (wbuf[i] != END_SEQ) {
-#if 0//def CONFIG_FEATURE_TGS2
+#ifdef CONFIG_FEATURE_TGS2
 		if (g_mdnie->user_mode != 0x0000) {
 			switch (wbuf[i]) {
-				case 0x0001:
-					if (wbuf[i+1] == 0x40) {
-						mode = wbuf[i+1];
-						mdnie_write(wbuf[i], 0x41);
-					} else {
-						mdnie_write(wbuf[i], wbuf[i+1]);
-					}
-					break;
-				case 0x0042:
-					mdnie_write(wbuf[i], wbuf[i+1]); // DE Threshold
-					if (mode == 0x40) {
-						mdnie_write(0x0049, 0x0400); // pcc skin
-						mdnie_write(0x004a, g_mdnie->user_cb); // cb
-						mdnie_write(0x004b, g_mdnie->user_cr); // cr
-						mdnie_write(0x004d, 0x0100); // pcc strength
-					}
-					break;
-				case 0x004a:
+				case 0x0063:
 					mdnie_write(wbuf[i], g_mdnie->user_cb);
 					break;
-				case 0x004b:
+				case 0x0065:
 					mdnie_write(wbuf[i], g_mdnie->user_cr);
 					break;
 				default:
@@ -224,7 +204,11 @@ void set_mdnie_value(struct mdnie_info *mdnie)
 			goto exit;
 	}
 
+#ifdef CONFIG_FEATURE_TGS2
+	if (mdnie->outdoor == OUTDOOR_OFF) {
+#else
 	if (!((mdnie->tone == TONE_NORMAL) && (mdnie->outdoor == OUTDOOR_OFF))) {
+#endif
 		dev_info(mdnie->dev, "%s\n", etc_table[mdnie->cabc][mdnie->outdoor][mdnie->tone].name);
 		mdnie_send_sequence(mdnie, etc_table[mdnie->cabc][mdnie->outdoor][mdnie->tone].seq);
 	}
@@ -605,12 +589,12 @@ static ssize_t user_mode_store(struct device *dev,
 
 	sscanf(buf, "%d", &value);
 
-	if (value == 0x0000 || value == 0x0006 || value == 0x0041 || value == 0x0045)
+	//if (value == 0x0000 || value == 0x0042 || value == 0x0044 || value == 0x0046)
 		mdnie->user_mode = value;
-	else {
-		printk(KERN_ERR "[mDNIe] invalid user mode value.\n");
-		mdnie->user_mode = 0x0000;
-	}
+	//else {
+	//	printk(KERN_ERR "[mDNIe] invalid user mode value.\n");
+	//	mdnie->user_mode = 0x0000;
+	//}
 
 	set_mdnie_value(mdnie);
 
