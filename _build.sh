@@ -31,7 +31,8 @@ esac
 # set build env
 export ARCH=arm
 #export CROSS_COMPILE=/opt/toolchains/arm-eabi-4.4.3/bin/arm-eabi-
-export CROSS_COMPILE=/opt/toolchains/arm-2011.03/bin/arm-none-eabi-
+#export CROSS_COMPILE=/opt/toolchains/arm-2011.03/bin/arm-none-eabi-
+export CROSS_COMPILE=/opt/toolchains/gcc-linaro-arm-linux-gnueabi-2012.03-20120326_linux/bin/arm-linux-gnueabi-
 export USE_SEC_FIPS_MODE=true
 export LOCALVERSION="-$BUILD_LOCALVERSION"
 
