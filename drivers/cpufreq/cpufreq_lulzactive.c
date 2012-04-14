@@ -70,7 +70,6 @@ static cpumask_t up_cpumask;
 static spinlock_t up_cpumask_lock;
 static cpumask_t down_cpumask;
 static spinlock_t down_cpumask_lock;
-static struct mutex set_speed_lock;
 
 /*
  * The minimum amount of time to spend at a frequency before we can step up.
