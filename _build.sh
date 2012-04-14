@@ -79,7 +79,7 @@ if [ "$COMPILE_ERROR" ]; then
 fi
 
 # *.ko replace
-find -name '*.ko' -exec cp -av {} /tmp/sc02c_initramfs/lib/modules/ \;
+find -name '*.ko' -exec cp -av {} $INITRAMFS_TMP_DIR/lib/modules/ \;
 
 # build zImage
 echo ""
