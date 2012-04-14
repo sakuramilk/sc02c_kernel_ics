@@ -1,0 +1,43 @@
+TOOLCHAIN_DIR=/opt/toolchains
+
+# codesourcery arm compiler
+# urt: http://sourcery.mentor.com/public/gnu_toolchain/
+check_and_get_codesourcery()
+{
+    COMPILER_ARCH=$1
+    COMPILER_VER=$2
+    COMPILER_REV=$3
+
+    if [ ! -d $TOOLCHAIN_DIR/$COMPILER_VER/$COMPILER_ARCH ]; then
+        wget --no-check-certificate http://sourcery.mentor.com/public/gnu_toolchain/$COMPILER_ARCH/$COMPILER_VER-$COMPILER_REV-$COMPILER_ARCH-i686-pc-linux-gnu.tar.bz2
+        sudo tar jxvf $COMPILER_VER-$COMPILER_REV-$COMPILER_ARCH-i686-pc-linux-gnu.tar.bz2 -C /opt/toolchains
+        rm $COMPILER_VER-$COMPILER_REV-$COMPILER_ARCH-i686-pc-linux-gnu.tar.bz2
+    fi
+
+    echo $TOOLCHAIN_DIR/$COMPILER_VER/bin/$COMPILER_ARCH-
+}
+
+
+# linaro compiler
+# urt: https://launchpad.net/linaro-toolchain-binaries/trunk/
+check_and_get_linaro()
+{
+    COMPILER_ARCH=$1
+    COMPILER_VER=$2
+    COMPILER_REV=$3"_linux"
+
+    if [ ! -d $TOOLCHAIN_DIR/gcc-linaro-$COMPILER_ARCH-$COMPILER_VER-$COMPILER_REV/$COMPILER_ARCH ]; then
+        wget --no-check-certificate https://launchpad.net/linaro-toolchain-binaries/trunk/$COMPILER_VER/+download/gcc-linaro-$COMPILER_ARCH-$COMPILER_VER-$COMPILER_REV.tar.bz2
+        sudo tar jxvf gcc-linaro-$COMPILER_ARCH-$COMPILER_VER-$COMPILER_REV.tar.bz2 -C /opt/toolchains
+        rm gcc-linaro-$COMPILER_ARCH-$COMPILER_VER-$COMPILER_REV.tar.bz2
+    fi
+
+    echo $TOOLCHAIN_DIR/gcc-linaro-$COMPILER_ARCH-$COMPILER_VER-$COMPILER_REV/bin/$COMPILER_ARCH-
+}
+
+
+# use codesourcery compiler
+#export BUILD_CROSS_COMPILE=`check_and_get_codesourcery arm-none-eabi arm-2011.03 42`
+
+# use linaro compiler
+export BUILD_CROSS_COMPILE=`check_and_get_linaro arm-linux-gnueabi 2012.03 20120326`

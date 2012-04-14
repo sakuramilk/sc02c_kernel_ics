@@ -18,8 +18,8 @@ export KBUILD_BUILD_HOST="Milk"
 ###########################################################
 # don't edit
 ###########################################################
-# nightly build
-if [ "$NIGHTLY_BUILD" = 'y' ]; then
+# release build
+if [ ! "$RELEASE_BUILD" = 'y' ]; then
   BUILD_VERSION=`date +%Y%m%d`
 fi
 export BUILD_LOCALVERSION="$TARGET_DEVICE-$BUILD_MOD-$BUILD_VERSION-$BUILD_TARGET"

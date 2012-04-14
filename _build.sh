@@ -28,11 +28,12 @@ esac
 # generate LOCALVERSION
 . mod_version
 
+# check and get compiler
+. cross_compile
+
 # set build env
 export ARCH=arm
-#export CROSS_COMPILE=/opt/toolchains/arm-eabi-4.4.3/bin/arm-eabi-
-#export CROSS_COMPILE=/opt/toolchains/arm-2011.03/bin/arm-none-eabi-
-export CROSS_COMPILE=/opt/toolchains/gcc-linaro-arm-linux-gnueabi-2012.03-20120326_linux/bin/arm-linux-gnueabi-
+export CROSS_COMPILE=$BUILD_CROSS_COMPILE
 export USE_SEC_FIPS_MODE=true
 export LOCALVERSION="-$BUILD_LOCALVERSION"
 
@@ -93,7 +94,9 @@ fi
 echo ""
 echo "=====> CREATE RELEASE IMAGE"
 # clean release dir
-rm $KERNEL_DIR/out/*
+if [ `find ./out -type f | wc -l` -gt 0 ]; then
+  rm $KERNEL_DIR/out/*
+fi
 
 # copy zImage
 cp arch/arm/boot/zImage ./out/
@@ -121,6 +124,12 @@ java -jar $SIGNAPK_DIR/signapk.jar $SIGNAPK_DIR/testkey.x509.pem $SIGNAPK_DIR/te
 rm cwm.zip
 rm -rf tmp
 echo "  out/$BUILD_LOCALVERSION-signed.zip"
+
+# rename zImage for multiboot
+if [ "$BUILD_TARGET" = "MULTI" ]; then
+    echo "  rename out/zImage => out/zImage_ics"
+    cp zImage zImage_ics
+fi
 
 cd $KERNEL_DIR
 echo ""

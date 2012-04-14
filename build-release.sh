@@ -16,10 +16,10 @@ git checkout ics
 cd $KERNEL_DIR
 
 read -p "select build type? [(r)elease/(n)ightly] " BUILD_TYPE
-if [ "$BUILD_TYPE" != 'release' -a "$BUILD_TYPE" != 'r' ]; then
-  export NIGHTLY_BUILD=y
+if [ "$BUILD_TYPE" = 'release' -o "$BUILD_TYPE" = 'r' ]; then
+  export RELEASE_BUILD=y
 else
-  unset NIGHTLY_BUILD
+  unset RELEASE_BUILD
 fi
 
 # create release dir＿
