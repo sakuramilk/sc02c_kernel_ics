@@ -2027,7 +2027,7 @@ static int srp_resume(struct platform_device *pdev)
 #define srp_resume  NULL
 #endif
 
-static struct platform_driver srp_driver = {
+static struct platform_driver __refdata srp_driver = {
 	.probe		= srp_probe,
 	.remove		= srp_remove,
 	.suspend	= srp_suspend,
