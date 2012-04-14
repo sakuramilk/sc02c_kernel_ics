@@ -35,7 +35,7 @@
 #define CMA_REGION_FIMD	"fimd"
 
 extern struct s3cfb_fimd_desc		*fbfimd;
-inline struct s3cfb_global *get_fimd_global(int id)
+static inline struct s3cfb_global *get_fimd_global(int id)
 {
         struct s3cfb_global *fbdev;
 

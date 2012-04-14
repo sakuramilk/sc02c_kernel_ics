@@ -8,6 +8,7 @@
 
 /* charger cable state */
 extern bool is_cable_attached;
+/* mc1n2 reboot notify */
 extern void mc1n2_reboot(void);
 
 static void sec_power_off(void)
