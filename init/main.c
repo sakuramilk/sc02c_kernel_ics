@@ -144,6 +144,7 @@ unsigned int kproc_feature_aosp = 1;
 #else
 unsigned int kproc_feature_aosp = 0;
 #endif
+unsigned int kproc_safe_mode = 0;
 
 /*
  * If set, this is an indication to the drivers that reset the underlying

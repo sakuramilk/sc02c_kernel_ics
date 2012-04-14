@@ -755,5 +755,6 @@ extern char *mach_panic_string;
 extern unsigned int kproc_build_target;
 extern unsigned int kproc_feature_aosp;
 #define FEATURE_AOSP_ENABLE	(kproc_feature_aosp)
+extern unsigned int kproc_safe_mode;
 
 #endif /* _LINUX_KERNEL_H */
