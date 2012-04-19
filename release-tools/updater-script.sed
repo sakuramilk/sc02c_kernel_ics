@@ -1,8 +1,14 @@
+ui_print("");  
+ui_print("");  
+ui_print("");
 ui_print("------------------------------------------------");
 ui_print("@VERSION");
-ui_print("  Author: Homura Milk");
+ui_print("  KBC Developer:"
+ui_print("    Homura Akemi");
+ui_print("    Ma34s3");
+ui_print("    Sakuramilk");
 ui_print("------------------------------------------------");
-
+ui_print("");
 show_progress(0.500000, 0);
 
 ui_print("flashing kernel image...");

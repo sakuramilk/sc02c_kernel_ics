@@ -2,16 +2,16 @@
 # set kernel version
 ###########################################################
 TARGET_DEVICE=SC02C-ICS
-BUILD_MOD=HMRMLK
-BUILD_VERSION=V2.2.4
+BUILD_MOD=KBC
+BUILD_VERSION=V2.2.5
 
 
 ###########################################################
 # set build user and host
 ###########################################################
 export KBUILD_BUILD_VERSION="1"
-export KBUILD_BUILD_USER="Homura"
-export KBUILD_BUILD_HOST="Milk"
+export KBUILD_BUILD_USER="Homura,Ma34s3,Sakuramilk"
+export KBUILD_BUILD_HOST="KBC"
 
 
 

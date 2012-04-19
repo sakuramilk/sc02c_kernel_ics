@@ -43,7 +43,8 @@ fi
 mv -v ./out/* $RELEASE_DIR
 
 # build for multiboot
-cd ../sc02c-initramfs
+
+cd ../sc02c_initramfs
 git checkout ics-multiboot
 cd $KERNEL_DIR
 bash ./build-multi.sh a
