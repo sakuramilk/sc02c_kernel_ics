@@ -1,9 +1,8 @@
-ui_print("");  
-ui_print("");  
+ui_print("");
 ui_print("");
 ui_print("------------------------------------------------");
 ui_print("@VERSION");
-ui_print("  KBC Developer:"
+ui_print("  KBC Developers:");
 ui_print("    Homura Akemi");
 ui_print("    Ma34s3");
 ui_print("    Sakuramilk");
