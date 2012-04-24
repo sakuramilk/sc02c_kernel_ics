@@ -53,12 +53,8 @@ static inline struct s3cfb_global *get_fimd_global(int id)
 #define CMA_REGION_VIDEO	"fimd"
 #endif
 
-#if defined(CONFIG_BOOT_LOGO_HOMUHOMU)
-#include "logo_rgb24_homura.h"
-#elif defined(CONFIG_BOOT_LOGO_WALPURGIS)
-#include "logo_rgb24_walpurgis.h"
-#elif defined(CONFIG_BOOT_LOGO_HUMMY)
-#include "logo_rgb24_hummy.h"
+#ifdef USER_BOOT_SPLASH
+#include "logo_rgb24_user.h"
 #endif
 
 struct s3c_platform_fb *to_fb_plat(struct device *dev)
@@ -130,10 +126,10 @@ int s3cfb_draw_logo(struct fb_info *fb)
 	}
 	logo_virt_buf = phys_to_virt(bootloaderfb);
 
-#ifdef CONFIG_BOOT_LOGO_BYPASS
-	memcpy(fb->screen_base, logo_virt_buf, fb->var.yres * fb->fix.line_length);
-#else
+#ifdef USER_BOOT_SPLASH
 	memcpy(fb->screen_base, LOGO_RGB24, fb->var.yres * fb->fix.line_length);
+#else
+	memcpy(fb->screen_base, logo_virt_buf, fb->var.yres * fb->fix.line_length);
 #endif
 
 #endif /* #ifdef RGB_BOOTSCREEN */

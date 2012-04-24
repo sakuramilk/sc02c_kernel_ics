@@ -238,29 +238,3 @@ config FB_S5P_V2_TL2796
 	---help---
 	  This enables support for Samsung  TL2796 WVGA LCD panel
 endchoice
-
-choice
-prompt "Select boot logo"
-default BOOT_LOGO_BYPASS
-
-config BOOT_LOGO_BYPASS
-	bool "BYPASS"
-	---help---
-	  This bootloader image
-
-config BOOT_LOGO_HOMUHOMU
-	bool "HOMUHOMU"
-	---help---
-	  This homhom boot logo
-
-config BOOT_LOGO_WALPURGIS
-	bool "WALPURGIS"
-	---help---
-	  This walpurgis boot logo
-
-config BOOT_LOGO_HUMMY
-	bool "HUMMY"
-	---help---
-	  This hummy boot logo
-
-endchoice

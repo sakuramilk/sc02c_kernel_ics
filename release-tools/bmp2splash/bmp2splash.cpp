@@ -92,13 +92,13 @@ int main(int argc, char** argv)
     uint32_t count = 0;
 
     if (argc != 2) {
-        printf("Usage: bmp2splash [24bit bmp file]\n");
+        fprintf(stderr, "Usage: bmp2splash [24bit bmp file]\n");
         ret = -1;
         goto exit;
     }
 
     if ((fp = fopen(argv[1], "r")) == NULL) {
-        printf("error: can't open bmp file.\n");
+        fprintf(stderr, "error: can't open bmp file.\n");
         ret = -1;
         goto exit;
     }
@@ -110,7 +110,7 @@ int main(int argc, char** argv)
 
     pFileBuf = (uint8_t*)malloc(fileSize);
     if (!pFileBuf) {
-        printf("error: can't allocation memory.\n");
+        fprintf(stderr, "error: can't allocation memory.\n");
         ret = -1;
         goto exit;
     }
@@ -161,7 +161,7 @@ int main(int argc, char** argv)
     if (bmpInfoHeader.biWidth != 480
     ||  bmpInfoHeader.biHeight != 800
     ||  bmpInfoHeader.biBitCount != 24) {
-        printf("error: bitmap format is not 800x480 24bit.\n");
+        fprintf(stderr, "error: bitmap format is not 800x480 24bit.\n");
         ret = -1;
         goto exit;
     }
@@ -179,6 +179,7 @@ int main(int argc, char** argv)
     }
     printf("};\n");
 
+    fprintf(stderr, "success: splash header output complete.\n");
 exit:
     if (pFileBuf) free(pFileBuf);
     return ret;

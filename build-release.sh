@@ -27,7 +27,7 @@ RELEASE_DIR=../release/`date +%Y%m%d`
 mkdir -p $RELEASE_DIR
 
 # build for samsung
-bash ./build-samsung.sh a
+bash ./build-samsung.sh a $1
 if [ $? != 0 ]; then
   echo 'error: samsung build fail'
   exit -1
@@ -35,7 +35,7 @@ fi
 cp -v ./out/* $RELEASE_DIR
 
 # build for aosp
-bash ./build-aosp.sh a
+bash ./build-aosp.sh a $1
 if [ $? != 0 ]; then
   echo 'error: aosp build fail'
   exit -1
@@ -47,7 +47,7 @@ cp -v ./out/* $RELEASE_DIR
 cd ../sc02c_initramfs
 git checkout ics_multiboot
 cd $KERNEL_DIR
-bash ./build-multi.sh a
+bash ./build-multi.sh a $1
 if [ $? != 0 ]; then
   echo 'error: multi build fail'
   exit -1

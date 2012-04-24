@@ -4,7 +4,7 @@ LD := $(CROSS_COMPILE)ld
 TARGET := bmp2splash
 OBJS   := bmp2splash.o
 
-CFLAGS = -O0 -Wall -Wpadded
+CFLAGS = -O0 -Wall
 
 all: $(TARGET)
 

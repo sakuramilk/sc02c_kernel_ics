@@ -4,6 +4,11 @@ KERNEL_DIR=$PWD
 INITRAMFS_SRC_DIR=../sc02c_initramfs
 INITRAMFS_TMP_DIR=/tmp/sc02c_initramfs
 
+echo "1=$1"
+echo "2=$2"
+echo "3=$3"
+
+
 cpoy_initramfs()
 {
   if [ -d /tmp/sc02c_initramfs ]; then
@@ -24,6 +29,25 @@ case "$BUILD_TARGET" in
   * ) echo "error: not found BUILD_TARGET" && exit -1 ;;
 esac
 OUTPUT_DIR=out/$BUILD_TARGET
+
+
+# generate boot splash header
+if [ -n "$3" ]; then
+  # make simg2img
+  if [ ! -e ./release-tools/bmp2splash/bmp2splash ]; then
+      echo "make bmp2splash..."
+      make -C ./release-tools/bmp2splash
+  fi
+  echo "generate bmp2splash header..."
+  ./release-tools/bmp2splash/bmp2splash $3 > ./drivers/video/samsung/logo_rgb24_user.h
+  if [ $? != 0 ]; then
+     exit -1
+  fi
+  export USER_BOOT_SPLASH=y
+else
+  echo "not slect boot splash"
+fi
+
 
 # generate LOCALVERSION
 . mod_version

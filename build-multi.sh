@@ -1,3 +1,3 @@
 #!/bin/bash
 
-./_build.sh "MULTI" $1
+./_build.sh "MULTI" $1 $2
