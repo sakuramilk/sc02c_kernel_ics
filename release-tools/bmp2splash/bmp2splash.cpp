@@ -166,10 +166,12 @@ int main(int argc, char** argv)
         goto exit;
     }
 
+    uint8_t *pLine;
     printf("const unsigned long LOGO_RGB24[] = {\n");
     for (uint32_t h = 0; h < bmpInfoHeader.biHeight; h++) {
+        pLine = pBmpData + (bmpInfoHeader.biHeight - h - 1) * bmpInfoHeader.biWidth * 3;
         for (uint32_t w = 0; w < bmpInfoHeader.biWidth; w++) {
-            uint32_t rgba = read_3byte(pBmpData);
+            uint32_t rgba = read_3byte(pLine);
             printf("0x%08x,", rgba);
             if ((++count % 10) == 0) {
                 printf("\n");

@@ -4,10 +4,6 @@ KERNEL_DIR=$PWD
 INITRAMFS_SRC_DIR=../sc02c_initramfs
 INITRAMFS_TMP_DIR=/tmp/sc02c_initramfs
 
-echo "1=$1"
-echo "2=$2"
-echo "3=$3"
-
 
 cpoy_initramfs()
 {
