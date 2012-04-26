@@ -32,7 +32,8 @@ if [ $? != 0 ]; then
   echo 'error: samsung build fail'
   exit -1
 fi
-cp -v ./out/* $RELEASE_DIR
+mkdir $RELEASE_DIR/SAM
+cp -v ./out/SAM/* $RELEASE_DIR/SAM/
 
 # build for aosp
 bash ./build-aosp.sh a $1
@@ -40,7 +41,8 @@ if [ $? != 0 ]; then
   echo 'error: aosp build fail'
   exit -1
 fi
-cp -v ./out/* $RELEASE_DIR
+mkdir $RELEASE_DIR/AOSP
+cp -v ./out/AOSP/* $RELEASE_DIR/AOSP
 
 # build for multiboot
 
@@ -52,4 +54,5 @@ if [ $? != 0 ]; then
   echo 'error: multi build fail'
   exit -1
 fi
-cp -v ./out/* $RELEASE_DIR
+mkdir $RELEASE_DIR/MULTI
+cp -v ./out/MULTI/* $RELEASE_DIR/MULTI

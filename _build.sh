@@ -119,7 +119,9 @@ if [ `find ./$OUTPUT_DIR -type f | wc -l` -gt 0 ]; then
 fi
 
 # copy zImage
+cp arch/arm/boot/zImage ./$OUTPUT_DIR/
 cp arch/arm/boot/zImage ./out/
+echo "  out/$OUTPUT_DIR/zImage"
 echo "  out/zImage"
 
 # create odin image
@@ -147,7 +149,7 @@ echo "  $OUTPUT_DIR/$BUILD_LOCALVERSION-signed.zip"
 
 # rename zImage for multiboot
 if [ "$BUILD_TARGET" = "MULTI" ]; then
-    echo "  rename out/zImage => out/zImage_ics"
+    echo "  rename $OUTPUT_DIR/zImage => $OUTPUT_DIR/zImage_ics"
     cp zImage zImage_ics
 fi
 
