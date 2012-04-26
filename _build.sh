@@ -119,8 +119,8 @@ if [ `find ./$OUTPUT_DIR -type f | wc -l` -gt 0 ]; then
 fi
 
 # copy zImage
-cp arch/arm/boot/zImage ./$OUTPUT_DIR/
-echo "  $OUTPUT_DIR/zImage"
+cp arch/arm/boot/zImage ./out/
+echo "  out/zImage"
 
 # create odin image
 cd $KERNEL_DIR/$OUTPUT_DIR
