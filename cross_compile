@@ -37,7 +37,7 @@ check_and_get_linaro()
 
 
 # use codesourcery compiler
-#export BUILD_CROSS_COMPILE=`check_and_get_codesourcery arm-none-eabi arm-2011.03 42`
+export BUILD_CROSS_COMPILE=`check_and_get_codesourcery arm-none-eabi arm-2011.03 42`
 
 # use linaro compiler
-export BUILD_CROSS_COMPILE=`check_and_get_linaro arm-linux-gnueabi 2012.03 20120326`
+#export BUILD_CROSS_COMPILE=`check_and_get_linaro arm-linux-gnueabi 2012.03 20120326`
