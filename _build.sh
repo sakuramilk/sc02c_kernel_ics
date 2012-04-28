@@ -3,7 +3,7 @@
 KERNEL_DIR=$PWD
 INITRAMFS_SRC_DIR=../sc02c_initramfs
 INITRAMFS_TMP_DIR=/tmp/sc02c_initramfs
-
+BOOT_SPLASH=./boot-splash/$3.bmp
 
 cpoy_initramfs()
 {
@@ -35,7 +35,7 @@ if [ -n "$3" ]; then
       make -C ./release-tools/bmp2splash
   fi
   echo "generate bmp2splash header..."
-  ./release-tools/bmp2splash/bmp2splash $3 > ./drivers/video/samsung/logo_rgb24_user.h
+  ./release-tools/bmp2splash/bmp2splash $BOOT_SPLASH > ./drivers/video/samsung/logo_rgb24_user.h
   if [ $? != 0 ]; then
      exit -1
   fi
