@@ -28,14 +28,21 @@ OUTPUT_DIR=out/$BUILD_TARGET
 
 
 # generate boot splash header
-if [ -n "$3" ]; then
+if [ ! -n "$3" ]; then
+  read -p "select boots plash image (default:none) : " SPLASH_IMAGE_SELECT
+  SPLASH_IMAGE=`find ./boot-splash/ -type f | grep $SPLASH_IMAGE_SELECT`
+else
+  SPLASH_IMAGE=`find ./boot-splash/ -type f | grep $3`
+fi
+
+if [ -n "$SPLASH_IMAGE" ]; then
   # make simg2img
   if [ ! -e ./release-tools/bmp2splash/bmp2splash ]; then
       echo "make bmp2splash..."
       make -C ./release-tools/bmp2splash
   fi
-  echo "generate bmp2splash header..."
-  ./release-tools/bmp2splash/bmp2splash $3 > ./drivers/video/samsung/logo_rgb24_user.h
+  echo "generate bmp2splash header from $SPLASH_IMAGE..."
+  ./release-tools/bmp2splash/bmp2splash $SPLASH_IMAGE > ./drivers/video/samsung/logo_rgb24_user.h
   if [ $? != 0 ]; then
      exit -1
   fi
