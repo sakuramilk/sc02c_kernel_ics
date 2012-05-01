@@ -34,7 +34,9 @@
 #include <plat/pm.h>
 #include <plat/devs.h>
 #include <plat/cpu.h>
-#include <plat/usb-phy.h>
+#ifdef CONFIG_SEC_WATCHDOG_RESET
+#include <plat/regs-watchdog.h>
+#endif
 #include <mach/regs-usb-phy.h>
 
 #ifdef CONFIG_ARM_TRUSTZONE
@@ -68,8 +70,18 @@ struct check_device_op {
 	enum hc_type		type;
 };
 
+unsigned int log_en;
+module_param_named(log_en, log_en, uint, 0644);
+
+
 #if defined(CONFIG_MACH_MIDAS)
-#define CPUDILE_ENABLE_MASK (ENABLE_LPA)
+#if defined(CONFIG_MACH_C1_KOR_SKT) || defined(CONFIG_MACH_C1_KOR_KT) || \
+	defined(CONFIG_MACH_C1_KOR_LGT)
+#define CPUDILE_ENABLE_MASK (ENABLE_IDLE)
+#else
+/* #define CPUDILE_ENABLE_MASK (ENABLE_LPA) */
+#define CPUDILE_ENABLE_MASK (ENABLE_IDLE)
+#endif
 #else
 #define CPUDILE_ENABLE_MASK (ENABLE_AFTR | ENABLE_LPA)
 #endif
@@ -208,9 +220,16 @@ static int check_power_domain(void)
 	if ((tmp & S5P_INT_LOCAL_PWR_EN) == S5P_INT_LOCAL_PWR_EN)
 		return 1;
 
-	tmp = __raw_readl(S5P_PMU_MFC_CONF);
-	if ((tmp & S5P_INT_LOCAL_PWR_EN) == S5P_INT_LOCAL_PWR_EN)
-		return 1;
+	/*
+	 * from REV 1.1, MFC power domain can turn off
+	 */
+	if (((soc_is_exynos4412()) && (samsung_rev() >= EXYNOS4412_REV_1_1)) ||
+	    ((soc_is_exynos4212()) && (samsung_rev() >= EXYNOS4212_REV_1_0)) ||
+	     soc_is_exynos4210()) {
+		tmp = __raw_readl(S5P_PMU_MFC_CONF);
+		if ((tmp & S5P_INT_LOCAL_PWR_EN) == S5P_INT_LOCAL_PWR_EN)
+			return 1;
+	}
 
 	tmp = __raw_readl(S5P_PMU_G3D_CONF);
 	if ((tmp & S5P_INT_LOCAL_PWR_EN) == S5P_INT_LOCAL_PWR_EN)
@@ -346,7 +365,7 @@ static int exynos4_check_operation(void)
 	if (clock_domain_enabled(LPA_DOMAIN))
 		return 1;
 
-	if (loop_sdmmc_check() || exynos4_check_usb_op())
+	if (loop_sdmmc_check())
 		return 1;
 #ifdef CONFIG_SND_SAMSUNG_RP
 	if (srp_get_op_level())
@@ -361,8 +380,19 @@ static int exynos4_check_operation(void)
 	if (check_gps_uart_op())
 		return 1;
 
+	if (exynos4_check_usb_op())
+		return 1;
+
 	return 0;
 }
+
+#ifdef CONFIG_SEC_WATCHDOG_RESET
+static struct sleep_save exynos4_aftr_save[] = {
+	SAVE_ITEM(S3C2410_WTDAT),
+	SAVE_ITEM(S3C2410_WTCNT),
+	SAVE_ITEM(S3C2410_WTCON),
+};
+#endif
 
 static struct sleep_save exynos4_lpa_save[] = {
 	/* CMU side */
@@ -376,28 +406,27 @@ static struct sleep_save exynos4_lpa_save[] = {
 	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_PERIL0),
 	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_PERIL1),
 	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_DMC),
-};
-
-static struct sleep_save exynos4_aftr_save[] = {
-	/* CMU side */
-	SAVE_ITEM(S5P_CLKSRC_AUDSS),
-	SAVE_ITEM(S5P_CLKDIV_AUDSS),
+#ifdef CONFIG_SEC_WATCHDOG_RESET
+	SAVE_ITEM(S3C2410_WTDAT),
+	SAVE_ITEM(S3C2410_WTCNT),
+	SAVE_ITEM(S3C2410_WTCON),
+#endif
 };
 
 static struct sleep_save exynos4_set_clksrc[] = {
-	{ .reg = EXYNOS4_CLKSRC_MASK_TOP			, .val = 0x00000001, },
-	{ .reg = EXYNOS4_CLKSRC_MASK_CAM			, .val = 0x11111111, },
-	{ .reg = EXYNOS4_CLKSRC_MASK_TV				, .val = 0x00000111, },
-	{ .reg = EXYNOS4_CLKSRC_MASK_LCD0			, .val = 0x00001111, },
-	{ .reg = EXYNOS4_CLKSRC_MASK_MAUDIO			, .val = 0x00000001, },
-	{ .reg = EXYNOS4_CLKSRC_MASK_FSYS			, .val = 0x01011111, },
-	{ .reg = EXYNOS4_CLKSRC_MASK_PERIL0			, .val = 0x01111111, },
-	{ .reg = EXYNOS4_CLKSRC_MASK_PERIL1			, .val = 0x01110111, },
-	{ .reg = EXYNOS4_CLKSRC_MASK_DMC			, .val = 0x00010000, },
+	{ .reg = EXYNOS4_CLKSRC_MASK_TOP		, .val = 0x00000001, },
+	{ .reg = EXYNOS4_CLKSRC_MASK_CAM		, .val = 0x11111111, },
+	{ .reg = EXYNOS4_CLKSRC_MASK_TV			, .val = 0x00000111, },
+	{ .reg = EXYNOS4_CLKSRC_MASK_LCD0		, .val = 0x00001111, },
+	{ .reg = EXYNOS4_CLKSRC_MASK_MAUDIO		, .val = 0x00000001, },
+	{ .reg = EXYNOS4_CLKSRC_MASK_FSYS		, .val = 0x01011111, },
+	{ .reg = EXYNOS4_CLKSRC_MASK_PERIL0		, .val = 0x01111111, },
+	{ .reg = EXYNOS4_CLKSRC_MASK_PERIL1		, .val = 0x01110111, },
+	{ .reg = EXYNOS4_CLKSRC_MASK_DMC		, .val = 0x00010000, },
 };
 
 static struct sleep_save exynos4210_set_clksrc[] = {
-	{ .reg = EXYNOS4_CLKSRC_MASK_LCD1			, .val = 0x00001111, },
+	{ .reg = EXYNOS4_CLKSRC_MASK_LCD1		, .val = 0x00001111, },
 };
 
 static int exynos4_check_enter(void)
@@ -448,16 +477,15 @@ static int exynos4_enter_core0_aftr(struct cpuidle_device *dev,
 	int idle_time;
 	unsigned long tmp;
 
-	/*
-	 * Defence code to avoid start up code latency after wakeup from aftr mode
-	 */
+#ifdef CONFIG_SEC_WATCHDOG_RESET
 	s3c_pm_do_save(exynos4_aftr_save, ARRAY_SIZE(exynos4_aftr_save));
-
-	tmp = __raw_readl(S5P_CLKDIV_AUDSS);
-	tmp &= ~S5P_AUDSS_CLKDIV_RP_MASK;
-	__raw_writel(tmp, S5P_CLKDIV_AUDSS);
+#endif
 
 	local_irq_disable();
+
+	if (log_en)
+		pr_info("+++aftr\n");
+
 	do_gettimeofday(&before);
 
 	exynos4_set_wakeupmask();
@@ -471,8 +499,10 @@ static int exynos4_enter_core0_aftr(struct cpuidle_device *dev,
 	if (!soc_is_exynos4210())
 		exynos4_reset_assert_ctrl(0);
 
+#ifdef CONFIG_EXYNOS4_CPUFREQ
 	if (!soc_is_exynos4210())
-		exynos4x12_set_abb(ABB_MODE_100V);
+		exynos4x12_set_abb(ABB_MODE_085V);
+#endif
 
 	if (exynos4_enter_lp(0, PLAT_PHYS_OFFSET - PAGE_OFFSET) == 0) {
 
@@ -491,11 +521,16 @@ static int exynos4_enter_core0_aftr(struct cpuidle_device *dev,
 
 	vfp_enable(NULL);
 
+#ifdef CONFIG_SEC_WATCHDOG_RESET
 	s3c_pm_do_restore_core(exynos4_aftr_save,
-			       ARRAY_SIZE(exynos4_aftr_save));
+				ARRAY_SIZE(exynos4_aftr_save));
+#endif
+
 early_wakeup:
+#ifdef CONFIG_EXYNOS4_CPUFREQ
 	if ((exynos_result_of_asv > 3) && !soc_is_exynos4210())
 		exynos4x12_set_abb(ABB_MODE_130V);
+#endif
 
 	if (!soc_is_exynos4210())
 		exynos4_reset_assert_ctrl(1);
@@ -504,6 +539,9 @@ early_wakeup:
 	__raw_writel(0x0, S5P_WAKEUP_STAT);
 
 	do_gettimeofday(&after);
+
+	if (log_en)
+		pr_info("---aftr\n");
 
 	local_irq_enable();
 	idle_time = (after.tv_sec - before.tv_sec) * USEC_PER_SEC +
@@ -538,6 +576,9 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 #endif
 	local_irq_disable();
 
+	if (log_en)
+		pr_info("+++lpa\n");
+
 	do_gettimeofday(&before);
 
 	/*
@@ -546,15 +587,12 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 	__raw_writel(0x3ff0000, S5P_WAKEUP_MASK);
 
 	/* Configure GPIO Power down control register */
-	if (soc_is_exynos4210())
-		exynos4_gpio_conpdn_reg();
-	else
 #ifdef CONFIG_MIDAS_COMMON
-		if (exynos4_sleep_gpio_table_set)
-			exynos4_sleep_gpio_table_set();
-#else
-		exynos4212_gpio_conpdn_reg();
+	if (exynos4_sleep_gpio_table_set)
+		exynos4_sleep_gpio_table_set();
+	else
 #endif
+		exynos4_gpio_conpdn_reg();
 
 	/* ensure at least INFORM0 has the resume address */
 	__raw_writel(virt_to_phys(exynos4_idle_resume), S5P_INFORM0);
@@ -573,9 +611,10 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 		/* Waiting for flushing UART fifo */
 	} while (exynos4_check_enter());
 
+#ifdef CONFIG_EXYNOS4_CPUFREQ
 	if (!soc_is_exynos4210())
-		exynos4x12_set_abb(ABB_MODE_100V);
-
+		exynos4x12_set_abb(ABB_MODE_085V);
+#endif
 
 	if (exynos4_enter_lp(0, PLAT_PHYS_OFFSET - PAGE_OFFSET) == 0) {
 
@@ -606,8 +645,10 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 	__raw_writel((1 << 28), S5P_PAD_RET_EBIB_OPTION);
 
 early_wakeup:
+#ifdef CONFIG_EXYNOS4_CPUFREQ
 	if ((exynos_result_of_asv > 3) && !soc_is_exynos4210())
 		exynos4x12_set_abb(ABB_MODE_130V);
+#endif
 
 	if (!soc_is_exynos4210())
 		exynos4_reset_assert_ctrl(1);
@@ -618,6 +659,9 @@ early_wakeup:
 	__raw_writel(0x0, S5P_WAKEUP_MASK);
 
 	do_gettimeofday(&after);
+
+	if (log_en)
+		pr_info("---lpa\n");
 
 	local_irq_enable();
 	idle_time = (after.tv_sec - before.tv_sec) * USEC_PER_SEC +

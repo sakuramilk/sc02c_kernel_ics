@@ -419,6 +419,7 @@ static int mic_sel_set(struct snd_kcontrol *kcontrol,
 	return 1;
 }
 
+#ifdef CONFIG_MACH_P11
 static int ext_amp_bias(struct snd_soc_dapm_widget *w,
 			struct snd_kcontrol *k, int event)
 {
@@ -436,6 +437,7 @@ static int ext_amp_bias(struct snd_soc_dapm_widget *w,
 
 	return 0;
 }
+#endif
 
 const char *mic_sel_text[] = {
 	"Sub", "Headset"
@@ -449,7 +451,6 @@ static const struct snd_kcontrol_new p10_controls[] = {
 	SOC_DAPM_PIN_SWITCH("SPK"),
 	SOC_DAPM_PIN_SWITCH("RCV"),
 	SOC_DAPM_PIN_SWITCH("LINE"),
-
 	SOC_ENUM_EXT("MIC Select", mic_sel_enum, mic_sel_get, mic_sel_set),
 };
 
@@ -457,8 +458,11 @@ const struct snd_soc_dapm_widget p10_dapm_widgets[] = {
 	SND_SOC_DAPM_HP("HP", NULL),
 	SND_SOC_DAPM_SPK("SPK", NULL),
 	SND_SOC_DAPM_SPK("RCV", NULL),
+#ifdef CONFIG_MACH_P11
 	SND_SOC_DAPM_SPK("LINE", ext_amp_bias),
-
+#else
+	SND_SOC_DAPM_SPK("LINE", NULL),
+#endif
 	SND_SOC_DAPM_MIC("Headset Mic", NULL),
 	SND_SOC_DAPM_MIC("Main Mic", NULL),
 	SND_SOC_DAPM_MIC("Sub Mic", NULL),
@@ -853,11 +857,13 @@ static int __init p10_audio_init(void)
 		pr_err("Failed to request EAR_SEL: %d\n", ret);
 #endif
 
+#ifdef CONFIG_MACH_P11
 	gpio_request_one(GPIO_AMP_L_INT, GPIOF_OUT_INIT_LOW, "AMP_L_INT");
 	gpio_set_value(GPIO_AMP_L_INT, 0);
 
 	gpio_request_one(GPIO_AMP_R_INT, GPIOF_OUT_INIT_LOW, "AMP_R_INT");
 	gpio_set_value(GPIO_AMP_R_INT, 0);
+#endif
 
 	p10_snd_device = platform_device_alloc("soc-audio", -1);
 	if (!p10_snd_device)

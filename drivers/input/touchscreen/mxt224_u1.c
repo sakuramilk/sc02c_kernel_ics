@@ -450,7 +450,6 @@ static void mxt224_ta_probe(bool ta_status)
 		calcfg_dis = copy_data->calcfg_charging_e;
 		calcfg_en = copy_data->calcfg_charging_e | 0x20;
 		noise_threshold = copy_data->noisethr_charging;
-		movfilter = copy_data->movfilter_charging;
 		charge_time = copy_data->chrgtime_charging_e;
 #ifdef CLEAR_MEDIAN_FILTER_ERROR
 		copy_data->gErrCondition = ERR_RTN_CONDITION_MAX;
@@ -465,7 +464,6 @@ static void mxt224_ta_probe(bool ta_status)
 		calcfg_dis = copy_data->calcfg_batt_e;
 		calcfg_en = copy_data->calcfg_batt_e | 0x20;
 		noise_threshold = copy_data->noisethr_batt;
-		movfilter = copy_data->movfilter_batt;
 		charge_time = copy_data->chrgtime_batt_e;
 #ifdef CLEAR_MEDIAN_FILTER_ERROR
 		copy_data->gErrCondition = ERR_RTN_CONDITION_IDLE;
@@ -640,11 +638,6 @@ static void mxt224_ta_probe(bool ta_status)
 			 (u8) size_one, &val);
 		printk(KERN_ERR "[TSP]TA_probe MXT224 T%d Byte%d is %d\n", 9,
 		       register_address, val);
-
-		value = (u8) movfilter;
-		register_address = 13;
-		write_mem(copy_data, obj_address + (u16) register_address,
-			  size_one, &value);
 
 		value = noise_threshold;
 		register_address = 8;
@@ -3354,8 +3347,8 @@ static int __devinit mxt224_probe(struct i2c_client *client,
 		data->atchcalsthr_e = pdata->atchcalsthr_e;
 		data->noise_suppression_cfg = pdata->t48_config_batt_e + 1;
 		data->noise_suppression_cfg_ta = pdata->t48_config_chrg_e + 1;
-		data->tchthr_batt_e= pdata->tchthr_batt_e;
-		data->tchthr_charging_e= pdata->tchthr_charging_e;
+		data->tchthr_batt_e = pdata->tchthr_batt_e;
+		data->tchthr_charging_e = pdata->tchthr_charging_e;
 		data->calcfg_batt_e = pdata->calcfg_batt_e;
 		data->calcfg_charging_e = pdata->calcfg_charging_e;
 		data->atchfrccalthr_e = pdata->atchfrccalthr_e;
@@ -3496,12 +3489,19 @@ static int __devinit mxt224_probe(struct i2c_client *client,
 	copy_data->freq_table.t9_movfilter_for_fherr = 80;
 	copy_data->freq_table.t22_noisethr_for_fherr = 30;
 	copy_data->freq_table.t22_freqscale_for_fherr = 1;
-
+#ifndef CONFIG_TARGET_LOCALE_KOR
 	copy_data->freq_table.freq_for_fherr1[0] = 10;
 	copy_data->freq_table.freq_for_fherr1[1] = 12;
 	copy_data->freq_table.freq_for_fherr1[2] = 18;
 	copy_data->freq_table.freq_for_fherr1[3] = 20;
 	copy_data->freq_table.freq_for_fherr1[4] = 29;
+#else
+	copy_data->freq_table.freq_for_fherr1[0] = 29;
+	copy_data->freq_table.freq_for_fherr1[1] = 34;
+	copy_data->freq_table.freq_for_fherr1[2] = 39;
+	copy_data->freq_table.freq_for_fherr1[3] = 49;
+	copy_data->freq_table.freq_for_fherr1[4] = 58;
+#endif
 	copy_data->freq_table.freq_for_fherr2[0] = 45;
 	copy_data->freq_table.freq_for_fherr2[1] = 49;
 	copy_data->freq_table.freq_for_fherr2[2] = 55;
@@ -3673,7 +3673,7 @@ static int __devinit mxt224_probe(struct i2c_client *client,
 #endif
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
-#if defined(CONFIG_TARGET_LOCALE_NA) || defined(CONFIG_TARGET_LOCALE_NAATT)
+#if defined(CONFIG_TARGET_LOCALE_NA) || defined(CONFIG_TARGET_LOCALE_NAATT) || defined(CONFIG_TARGET_LOCALE_KOR)
 	data->early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 1;
 #else
 	data->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;

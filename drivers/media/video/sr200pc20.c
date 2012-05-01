@@ -1105,6 +1105,8 @@ static int sr200pc20_s_stream(struct v4l2_subdev *sd, int enable)
 
 	cam_info("s_stream: mode = %d\n", enable);
 
+	BUG_ON(!state->initialized);
+
 	switch (enable) {
 	case STREAM_MODE_CAM_OFF:
 		if (state->sensor_mode == SENSOR_CAMERA) {

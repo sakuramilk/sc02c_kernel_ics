@@ -38,3 +38,12 @@ config DRM_EXYNOS_HDMI
 	help
 	  Choose this option if you want to use Samsung HDMI for DRM.
 	  If M is selected, the module will be called exynos_drm_hdmi
+
+config DRM_EXYNOS_VIDI
+	tristate "Samsung DRM Virtual Display"
+	depends on DRM_EXYNOS
+	default n
+	help
+	  Choose this option if you want to use Samsung VIDI for DRM.
+	  If M is selected, the module will be called exynos_drm_vidi
+
