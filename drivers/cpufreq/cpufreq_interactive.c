@@ -49,6 +49,7 @@ struct cpufreq_interactive_cpuinfo {
 	unsigned int target_freq;
 	unsigned int floor_freq;
 	u64 floor_validate_time;
+	u64 hispeed_validate_time;
 	int governor_enabled;
 };
 
@@ -206,7 +207,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 			if (pcpu->target_freq == hispeed_freq &&
 			    new_freq > hispeed_freq &&
 			    cputime64_sub(pcpu->timer_run_time,
-					  pcpu->target_set_time)
+					  pcpu->hispeed_validate_time)
 			    < above_hispeed_delay_val) {
 				trace_cpufreq_interactive_notyet(data, cpu_load,
 								 pcpu->target_freq,
@@ -217,6 +218,9 @@ static void cpufreq_interactive_timer(unsigned long data)
 	} else {
 		new_freq = pcpu->policy->max * cpu_load / 100;
 	}
+
+	if (new_freq <= hispeed_freq)
+		pcpu->hispeed_validate_time = pcpu->timer_run_time;
 
 	if (cpufreq_frequency_table_target(pcpu->policy, pcpu->freq_table,
 					   new_freq, CPUFREQ_RELATION_H,
@@ -496,7 +500,6 @@ static void cpufreq_interactive_boost(void)
 	unsigned long flags;
 	struct cpufreq_interactive_cpuinfo *pcpu;
 
-	trace_cpufreq_interactive_boost(hispeed_freq);
 	spin_lock_irqsave(&up_cpumask_lock, flags);
 
 	for_each_online_cpu(i) {
@@ -507,6 +510,7 @@ static void cpufreq_interactive_boost(void)
 			cpumask_set_cpu(i, &up_cpumask);
 			pcpu->target_set_time_in_idle =
 				get_cpu_idle_time_us(i, &pcpu->target_set_time);
+			pcpu->hispeed_validate_time = pcpu->target_set_time;
 			anyboost = 1;
 		}
 
@@ -535,8 +539,10 @@ static void cpufreq_interactive_input_event(struct input_handle *handle,
 					    unsigned int type,
 					    unsigned int code, int value)
 {
-	if (input_boost_val && type == EV_SYN && code == SYN_REPORT)
+	if (input_boost_val && type == EV_SYN && code == SYN_REPORT) {
+		trace_cpufreq_interactive_boost("input");
 		cpufreq_interactive_boost();
+	}
 }
 
 static void cpufreq_interactive_input_open(struct work_struct *w)
@@ -764,15 +770,35 @@ static ssize_t store_boost(struct kobject *kobj, struct attribute *attr,
 
 	boost_val = val;
 
-	if (boost_val)
+	if (boost_val) {
+		trace_cpufreq_interactive_boost("on");
 		cpufreq_interactive_boost();
-	else
-		trace_cpufreq_interactive_unboost(hispeed_freq);
+	} else {
+		trace_cpufreq_interactive_unboost("off");
+	}
 
 	return count;
 }
 
 define_one_global_rw(boost);
+
+static ssize_t store_boostpulse(struct kobject *kobj, struct attribute *attr,
+				const char *buf, size_t count)
+{
+	int ret;
+	unsigned long val;
+
+	ret = kstrtoul(buf, 0, &val);
+	if (ret < 0)
+		return ret;
+
+	trace_cpufreq_interactive_boost("pulse");
+	cpufreq_interactive_boost();
+	return count;
+}
+
+static struct global_attr boostpulse =
+	__ATTR(boostpulse, 0200, NULL, store_boostpulse);
 
 static struct attribute *interactive_attributes[] = {
 	&hispeed_freq_attr.attr,
@@ -782,6 +808,7 @@ static struct attribute *interactive_attributes[] = {
 	&timer_rate_attr.attr,
 	&input_boost.attr,
 	&boost.attr,
+	&boostpulse.attr,
 	NULL,
 };
 
@@ -819,6 +846,8 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 					     &pcpu->target_set_time);
 			pcpu->floor_freq = pcpu->target_freq;
 			pcpu->floor_validate_time =
+				pcpu->target_set_time;
+			pcpu->hispeed_validate_time =
 				pcpu->target_set_time;
 			pcpu->governor_enabled = 1;
 			smp_wmb();
