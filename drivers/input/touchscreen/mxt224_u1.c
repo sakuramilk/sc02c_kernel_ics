@@ -3234,8 +3234,7 @@ static DEVICE_ATTR(object_write, S_IRUGO | S_IWUSR | S_IWGRP, NULL,
 		   qt602240_object_setting);
 static DEVICE_ATTR(dbg_switch, S_IRUGO | S_IWUSR | S_IWGRP, NULL,
 		   mxt224_debug_setting);
-static DEVICE_ATTR(mov_hysti, S_IRUGO | S_IWUSR | S_IWGRP, 
-		mov_hysti_show, mov_hysti_store);
+static DEVICE_ATTR(mov_hysti, 0666, mov_hysti_show, mov_hysti_store);
 
 static int sec_touchscreen_enable(struct mxt224_data *data)
 {
