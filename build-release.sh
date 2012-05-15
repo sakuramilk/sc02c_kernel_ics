@@ -33,7 +33,7 @@ if [ $? != 0 ]; then
   exit -1
 fi
 mkdir $RELEASE_DIR/SAM
-cp -v ./out/SAM/* $RELEASE_DIR/SAM/
+cp -v ./out/SAM/bin/* $RELEASE_DIR/SAM/
 
 # build for aosp
 bash ./build-aosp.sh a $1
@@ -42,7 +42,7 @@ if [ $? != 0 ]; then
   exit -1
 fi
 mkdir $RELEASE_DIR/AOSP
-cp -v ./out/AOSP/* $RELEASE_DIR/AOSP
+cp -v ./out/AOSP/bin/* $RELEASE_DIR/AOSP
 
 # build for multiboot
 
@@ -55,4 +55,4 @@ if [ $? != 0 ]; then
   exit -1
 fi
 mkdir $RELEASE_DIR/MULTI
-cp -v ./out/MULTI/* $RELEASE_DIR/MULTI
+cp -v ./out/MULTI/bin/* $RELEASE_DIR/MULTI
