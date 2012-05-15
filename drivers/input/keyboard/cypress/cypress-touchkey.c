@@ -3,6 +3,8 @@
  *
  * Copyright 2012 sakuramilk <c.sakuramilk@gmail.com>
  * Copyright 2005 Phil Blundell
+ * Modified by DvTonder
+ * Full BLN compatibility and breathing effect by Fluxi
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -42,11 +44,7 @@
 #include <mach/gpio.h>
 
 #include "issp_extern.h"
-#ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT540E
-#include <linux/i2c/mxt540e.h>
-#else
 #include <linux/i2c/mxt224_u1.h>
-#endif
 
 #ifdef CONFIG_GENERIC_BLN
 #include <linux/bln.h>
@@ -57,8 +55,8 @@
 #endif
 
 /*
- * touchkey register
- */
+touchkey register
+*/
 #define KEYCODE_REG 0x00
 #define FIRMWARE_VERSION 0x01
 #define TOUCHKEY_MODULE_VERSION 0x02
@@ -148,6 +146,14 @@ static DEFINE_MUTEX(bln_sem);
 #define CM_BL_ALWAYS_ON		(-1)
 #define CM_BL_ALWAYS_OFF	(-2)
 
+/* Breathing defaults */
+#define CM_BREATHING_STEP_INRC	50
+#define CM_BREATHING_STEP_INT	100
+#define CM_BREATHING_MAX_VOLT	3300
+/* Blinking defaults */
+#define CM_BLINKING_INTERVAL_ON	1000	/* 1 second on */
+#define CM_BLINKING_INTERVAL_OFF	1000	/* 1 second off */
+
 static int cm_led_on = 0;
 static int cm_screen_on = 1;
 static int cm_led_timeout = CM_BL_ALWAYS_ON; /* never time out */
@@ -156,6 +162,16 @@ static int cm_notification_enabled = -1; /* Disabled by default */
 static struct wake_lock cm_led_wake_lock;
 static DEFINE_MUTEX(cm_enable_sem);
 
+static int cm_led_brightness;
+static int cm_fade_out = 0;
+static int cm_breathing_enabled = 0;
+static int cm_breathing_step_incr = CM_BREATHING_STEP_INRC;
+static int cm_breathing_step_int = CM_BREATHING_STEP_INT;
+static int cm_breathing_max_volt = CM_BREATHING_MAX_VOLT;
+static int cm_blinking_enabled = 0;
+static int cm_blinking_int_on = CM_BLINKING_INTERVAL_ON;
+static int cm_blinking_int_off = CM_BLINKING_INTERVAL_OFF;
+
 /* timer related declares */
 static struct timer_list cm_led_timer;
 static void bl_off(struct work_struct *bl_off_work);
@@ -163,6 +179,9 @@ static DECLARE_WORK(bl_off_work, bl_off);
 static struct timer_list cm_notification_timer;
 static void notification_off(struct work_struct *notification_off_work);
 static DECLARE_WORK(notification_off_work, notification_off);
+static struct timer_list cm_breathing_timer;
+static void breathing_off(struct work_struct *breathing_off_work);
+static DECLARE_WORK(breathing_off_work, breathing_off);
 #endif
 
 /* led i2c write value convert helper */
@@ -189,7 +208,7 @@ int touchkey_led_ldo_on(bool on)
 
 	if (on) {
 		regulator = regulator_get(NULL, "touch_led");
-		if (IS_ERR(regulator)){
+		if (IS_ERR(regulator)) {
 			printk(KERN_ERR "[TouchKey] touchkey_led_ldo_on(1): regulator error\n");
 			return 0;
 		}
@@ -245,6 +264,26 @@ static void change_touch_key_led_voltage(int vol_mv)
 	regulator_put(tled_regulator);
 }
 
+static void get_touch_key_led_voltage(void)
+{
+	struct regulator *tled_regulator;
+
+	tled_regulator = regulator_get(NULL, "touch_led");
+	if (IS_ERR(tled_regulator)) {
+		pr_err("%s: failed to get resource %s\n", __func__,
+		       "touch_led");
+		return;
+	}
+
+	cm_led_brightness = regulator_get_voltage(tled_regulator) / 1000;
+
+}
+
+static ssize_t brightness_read( struct device *dev, struct device_attribute *attr, char *buf )
+{
+	return sprintf(buf,"%d\n", cm_led_brightness);
+}
+
 static ssize_t brightness_control(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
 {
 	int data;
@@ -252,6 +291,7 @@ static ssize_t brightness_control(struct device *dev, struct device_attribute *a
 	if (sscanf(buf, "%d\n", &data) == 1) {
 		printk(KERN_ERR "[TouchKey] touch_led_brightness: %d\n", data);
 		change_touch_key_led_voltage(data);
+		cm_led_brightness = data;
 	} else {
 		printk(KERN_ERR "[TouchKey] touch_led_brightness Error\n");
 	}
@@ -411,6 +451,19 @@ void touchkey_work_func(struct work_struct *p)
 		input_sync(touchkey_driver->input_dev);
 		/* printk(KERN_DEBUG "[TouchKey] keycode:%d pressed:%d\n", touchkey_keycode[keycode_index], pressed); */
 	}
+
+	/* we have timed out or the lights should be on */
+	if (cm_led_timer.expires > jiffies || cm_led_timeout != CM_BL_ALWAYS_OFF) {
+		int status = 1;
+		change_touch_key_led_voltage(cm_led_brightness);
+		i2c_touchkey_write((u8 *)&status, 1); /* turn on */
+	}
+
+	/* restart the timer */
+	if (cm_led_timeout > 0) {
+		mod_timer(&cm_led_timer, jiffies + msecs_to_jiffies(cm_led_timeout));
+	}
+
 	set_touchkey_debug('A');
 	enable_irq(IRQ_TOUCH_INT);
 }
@@ -422,6 +475,30 @@ static irqreturn_t touchkey_interrupt(int irq, void *dummy)
 	queue_work(touchkey_wq, &touchkey_work);
 
 	return IRQ_HANDLED;
+}
+
+static void led_fadeout(void)
+{
+	int i, status = 2;
+
+	for (i = cm_led_brightness; i >= 2500; i -= 50) {
+		change_touch_key_led_voltage(i);
+		msleep(50);
+	}
+
+	i2c_touchkey_write((u8 *)&status, 1);
+}
+
+static void enable_touchkey_backlights(void)
+{
+        int status = 1;
+        i2c_touchkey_write((u8 *)&status, 1);
+}
+
+static void disable_touchkey_backlights(void)
+{
+        int status = 2;
+        i2c_touchkey_write((u8 *)&status, 1);
 }
 
 #ifdef CONFIG_GENERIC_BLN
@@ -456,8 +533,9 @@ static void melfas_enable_touchkey_backlights(void) {
 		if (touchkey_enable == 0) {
 			touchkey_bln_wakeup();
 		}
+		change_touch_key_led_voltage(cm_led_brightness);
 		value = touchkey_convert_led_value(1);
-        printk(KERN_ERR "[TouchKey] %d : %s(%d)\n", __LINE__, __func__, value);
+		printk(KERN_ERR "[TouchKey] %d : %s(%d)\n", __LINE__, __func__, value);
 		i2c_touchkey_write((u8 *)&value, 1);
 		touchkey_led_status = 2;
 		touchled_cmd_reversed = 1;
@@ -472,9 +550,13 @@ static void melfas_disable_touchkey_backlights(void) {
 	mutex_lock(&bln_sem);
 	if (touchkey_suspend)
 	{
-		value = touchkey_convert_led_value(2);
-        printk(KERN_ERR "[TouchKey] %d : %s(%d)\n", __LINE__, __func__, value);
-		i2c_touchkey_write((u8 *)&value, 1);
+		if (cm_fade_out) {
+			led_fadeout();
+		} else {
+			value = touchkey_convert_led_value(2);
+			printk(KERN_ERR "[TouchKey] %d : %s(%d)\n", __LINE__, __func__, value);
+			i2c_touchkey_write((u8 *)&value, 1);
+		}
 		if (touchkey_enable == 1) {
 			touchkey_bln_sleep();
 		}
@@ -503,9 +585,13 @@ static void bl_off(struct work_struct *bl_off_work)
 		return;
 
 	/* we have timed out, turn the lights off */
-	status = 2;
-    printk(KERN_ERR "[TouchKey] %d : %s(%d)\n", __LINE__, __func__, status);
-	i2c_touchkey_write((u8 *)&status, 1);
+	if (cm_fade_out) {
+		led_fadeout();
+	} else {
+		status = 2;
+		printk(KERN_ERR "[TouchKey] %d : %s(%d)\n", __LINE__, __func__, status);
+		i2c_touchkey_write((u8 *)&status, 1);
+	}
 
 	return;
 }
@@ -531,7 +617,7 @@ static void notification_off(struct work_struct *notification_off_work)
 
 	/* turn off the backlight */
 	status = 2; /* light off */
-    printk(KERN_ERR "[TouchKey] %d : %s(%d)\n", __LINE__, __func__, status);
+	printk(KERN_ERR "[TouchKey] %d : %s(%d)\n", __LINE__, __func__, status);
 	i2c_touchkey_write((u8 *)&status, 1);
 	touchkey_enable = 0;
 	cm_led_on = 0;
@@ -550,6 +636,46 @@ static void handle_notification_timeout(unsigned long data)
 	schedule_work(&notification_off_work);
 }
 
+static void led_breathing(void)
+{
+	int vol_mv;
+	int min = 2500, max = cm_breathing_max_volt;
+
+	for (vol_mv = min; vol_mv <= max; vol_mv += cm_breathing_step_incr) {
+		change_touch_key_led_voltage(vol_mv);
+		msleep(cm_breathing_step_int);
+	}
+	for (vol_mv = max; vol_mv >= min; vol_mv -= cm_breathing_step_incr) {
+		change_touch_key_led_voltage(vol_mv);
+		msleep(cm_breathing_step_int);
+	}
+	mod_timer(&cm_breathing_timer, jiffies + msecs_to_jiffies(300));
+}
+
+static void led_blinking(void)
+{
+	enable_touchkey_backlights();
+	msleep(cm_blinking_int_on);
+	disable_touchkey_backlights();
+
+	mod_timer(&cm_breathing_timer, jiffies + msecs_to_jiffies(cm_blinking_int_off));
+}
+
+static void breathing_off(struct work_struct *bl_off_work)
+{
+	if (cm_breathing_enabled && cm_led_on)
+		led_breathing();
+	else if (cm_blinking_enabled && cm_led_on)
+		led_blinking();
+
+	return;
+}
+
+static void handle_breathing_timeout(unsigned long data)
+{
+	/* we cannot call the timeout directly as it causes a kernel spinlock BUG, schedule it instead */
+	schedule_work(&breathing_off_work);
+}
 
 static ssize_t led_status_read( struct device *dev, struct device_attribute *attr, char *buf )
 {
@@ -580,14 +706,25 @@ static ssize_t led_status_write( struct device *dev, struct device_attribute *at
 				}
 
 				/* enable the backlight */
+				change_touch_key_led_voltage(cm_led_brightness);
 				status = touchkey_convert_led_value(1);
-                printk(KERN_ERR "[TouchKey] %d : %s(%d)\n", __LINE__, __func__, status);
+				printk(KERN_ERR "[TouchKey] %d : %s(%d)\n", __LINE__, __func__, status);
 				i2c_touchkey_write((u8 *)&status, 1);
 				cm_led_on = 1;
 
+				if (cm_breathing_enabled) {
+					/* either activate breathing */
+					led_breathing();
+				} else if (cm_blinking_enabled) {
+					/* or activate blinking */
+					//mod_timer(&cm_breathing_timer, jiffies + msecs_to_jiffies(cm_blinking_int_off));
+					led_blinking();
+				}
+
 				/* See if a timeout value has been set for the notification */
 				if (cm_notification_timeout > 0) {
-					mod_timer(&cm_notification_timer, jiffies + msecs_to_jiffies(cm_notification_timeout));	/* restart the timer */
+					/* restart the timer */
+					mod_timer(&cm_notification_timer, jiffies + msecs_to_jiffies(cm_notification_timeout));
 				}
 			}
 			break;
@@ -617,6 +754,11 @@ static ssize_t led_status_write( struct device *dev, struct device_attribute *at
 				/* a notification timeout was set, disable the timer */
 				if (cm_notification_timeout > 0) {
 					del_timer(&cm_notification_timer);
+				}
+
+				/* disable the breathing timer */
+				if (cm_breathing_enabled || cm_blinking_enabled) {
+					del_timer(&cm_breathing_timer);
 				}
 
 				/* we were using a wakelock, unlock it */
@@ -668,16 +810,180 @@ static ssize_t notification_enabled_write( struct device *dev, struct device_att
 	return size;
 }
 
+static ssize_t enable_breathing_read( struct device *dev, struct device_attribute *attr, char *buf )
+{
+	return sprintf(buf,"%d\n", cm_breathing_enabled);
+}
+
+static ssize_t enable_breathing_write( struct device *dev, struct device_attribute *attr, const char *buf, size_t size )
+{
+	unsigned int data;
+	int ret;
+
+	ret = sscanf(buf, "%d", &data);
+	if (ret != 1 || data < 0 || data > 1)
+		return -EINVAL;
+
+	cm_breathing_enabled = data;
+	cm_blinking_enabled = 0;
+
+	return size;
+}
+
+static ssize_t breathing_step_incr_read( struct device *dev, struct device_attribute *attr, char *buf )
+{
+	return sprintf(buf,"%d\n", cm_breathing_step_incr);
+}
+
+static ssize_t breathing_step_incr_write( struct device *dev, struct device_attribute *attr, const char *buf, size_t size )
+{
+	unsigned int data;
+	int ret;
+
+	ret = sscanf(buf, "%d", &data);
+	if (ret != 1 || data < 10 || data > 100)
+		return -EINVAL;
+
+	cm_breathing_step_incr = data;
+	return size;
+}
+
+static ssize_t breathing_step_int_read( struct device *dev, struct device_attribute *attr, char *buf )
+{
+	return sprintf(buf,"%d\n", cm_breathing_step_int);
+}
+
+static ssize_t breathing_step_int_write( struct device *dev, struct device_attribute *attr, const char *buf, size_t size )
+{
+	unsigned int data;
+	int ret;
+
+	ret = sscanf(buf, "%d", &data);
+	if (ret != 1 || data < 10 || data > 100)
+		return -EINVAL;
+
+	cm_breathing_step_int = data;
+	return size;
+}
+
+static ssize_t breathing_max_volt_read( struct device *dev, struct device_attribute *attr, char *buf )
+{
+	return sprintf(buf,"%d\n", cm_breathing_max_volt);
+}
+
+static ssize_t breathing_max_volt_write( struct device *dev, struct device_attribute *attr, const char *buf, size_t size )
+{
+	unsigned int data;
+	int ret;
+
+	ret = sscanf(buf, "%d", &data);
+	if (ret != 1 || data < 2600 || data > 3300)
+		return -EINVAL;
+
+	cm_breathing_max_volt = data;
+	return size;
+}
+
+static ssize_t enable_blinking_read( struct device *dev, struct device_attribute *attr, char *buf )
+{
+	return sprintf(buf,"%d\n", cm_blinking_enabled);
+}
+
+static ssize_t enable_blinking_write( struct device *dev, struct device_attribute *attr, const char *buf, size_t size )
+{
+	unsigned int data;
+	int ret;
+
+	ret = sscanf(buf, "%d", &data);
+	if (ret != 1 || data < 0 || data > 1)
+		return -EINVAL;
+
+	cm_blinking_enabled = data;
+	cm_breathing_enabled = 0;
+
+	return size;
+}
+
+static ssize_t blinking_int_on_read( struct device *dev, struct device_attribute *attr, char *buf )
+{
+	return sprintf(buf,"%d\n", cm_blinking_int_on);
+}
+
+static ssize_t blinking_int_on_write( struct device *dev, struct device_attribute *attr, const char *buf, size_t size )
+{
+	unsigned int data;
+	int ret;
+
+	ret = sscanf(buf, "%d", &data);
+	if (ret != 1 || data < 1 || data > 10000)
+		return -EINVAL;
+
+	cm_blinking_int_on = data;
+	return size;
+}
+
+static ssize_t blinking_int_off_read( struct device *dev, struct device_attribute *attr, char *buf )
+{
+	return sprintf(buf,"%d\n", cm_blinking_int_off);
+}
+
+static ssize_t blinking_int_off_write( struct device *dev, struct device_attribute *attr, const char *buf, size_t size )
+{
+	unsigned int data;
+	int ret;
+
+	ret = sscanf(buf, "%d", &data);
+	if (ret != 1 || data < 1 || data > 10000)
+		return -EINVAL;
+
+	cm_blinking_int_off = data;
+	return size;
+}
+
+static ssize_t led_fadeout_read( struct device *dev, struct device_attribute *attr, char *buf )
+{
+	return sprintf(buf,"%d\n", cm_fade_out);
+}
+
+static ssize_t led_fadeout_write( struct device *dev, struct device_attribute *attr, const char *buf, size_t size )
+{
+	unsigned int data;
+	int ret;
+
+	ret = sscanf(buf, "%d", &data);
+	if (ret != 1 || data < 0 || data > 1)
+		return -EINVAL;
+
+	cm_fade_out = data;
+	return size;
+}
+
 static DEVICE_ATTR(led, S_IRUGO | S_IWUGO, led_status_read, led_status_write );
 static DEVICE_ATTR(led_timeout, S_IRUGO | S_IWUGO, led_timeout_read, led_timeout_write );
 static DEVICE_ATTR(notification_timeout, S_IRUGO | S_IWUGO, notification_timeout_read, notification_timeout_write );
 static DEVICE_ATTR(notification_enabled, S_IRUGO | S_IWUGO, notification_enabled_read, notification_enabled_write );
+static DEVICE_ATTR(breathing_enabled, S_IRUGO | S_IWUGO, enable_breathing_read, enable_breathing_write );
+static DEVICE_ATTR(breathing_step_increment, S_IRUGO | S_IWUGO, breathing_step_incr_read, breathing_step_incr_write );
+static DEVICE_ATTR(breathing_step_interval, S_IRUGO | S_IWUGO, breathing_step_int_read, breathing_step_int_write );
+static DEVICE_ATTR(breathing_max_volt, S_IRUGO | S_IWUGO, breathing_max_volt_read, breathing_max_volt_write );
+static DEVICE_ATTR(blinking_enabled, S_IRUGO | S_IWUGO, enable_blinking_read, enable_blinking_write );
+static DEVICE_ATTR(blinking_int_on, S_IRUGO | S_IWUGO, blinking_int_on_read, blinking_int_on_write );
+static DEVICE_ATTR(blinking_int_off, S_IRUGO | S_IWUGO, blinking_int_off_read, blinking_int_off_write );
+static DEVICE_ATTR(led_fadeout, S_IRUGO | S_IWUGO, led_fadeout_read, led_fadeout_write );
 
 static struct attribute *cm_bl_led_attributes[] = {
 	&dev_attr_led.attr,
 	&dev_attr_led_timeout.attr,
 	&dev_attr_notification_timeout.attr,
 	&dev_attr_notification_enabled.attr,
+	&dev_attr_breathing_enabled.attr,
+	&dev_attr_breathing_step_increment.attr,
+	&dev_attr_breathing_step_interval.attr,
+	&dev_attr_breathing_max_volt.attr,
+	&dev_attr_blinking_enabled.attr,
+	&dev_attr_blinking_int_on.attr,
+	&dev_attr_blinking_int_off.attr,
+	&dev_attr_led_fadeout.attr,
 	NULL
 };
 
@@ -803,6 +1109,7 @@ static int sec_touchkey_late_resume(struct early_suspend *h)
 	if (cm_led_timeout != CM_BL_ALWAYS_OFF) {
 		/* ensure the light is ON */
 		int status = 1;
+		change_touch_key_led_voltage(cm_led_brightness);
 		printk(KERN_ERR "[TouchKey] %d : %s(%d)\n", __LINE__, __func__, status);
 		i2c_touchkey_write((u8 *)&status, 1);
 	}
@@ -933,6 +1240,7 @@ static int i2c_touchkey_probe(struct i2c_client *client, const struct i2c_device
 	/* Setup the timer for the timeouts */
 	setup_timer(&cm_led_timer, handle_led_timeout, 0);
 	setup_timer(&cm_notification_timer, handle_notification_timeout, 0);
+	setup_timer(&cm_breathing_timer, handle_breathing_timeout, 0);
 
 	/* wake lock for LED Notify */
 	wake_lock_init(&cm_led_wake_lock, WAKE_LOCK_SUSPEND, "led_wake_lock");
@@ -1070,11 +1378,6 @@ static ssize_t touch_led_control(struct device *dev, struct device_attribute *at
 	int errnum;
 
 	if (sscanf(buf, "%d\n", &data) == 1) {
-#ifdef CONFIG_CM_BLN
-		if (cm_led_timeout == CM_BL_ALWAYS_OFF && data == 1) {
-			return size;
-		}
-#endif
 		value = touchkey_convert_led_value(data);
 		printk("[TouchKey] led %s\n", (value == 0x1 || value == 0x10) ? "on" : "off");
 		errnum = i2c_touchkey_write((u8 *)&value, 1);
@@ -1227,7 +1530,7 @@ static DEVICE_ATTR(touchkey_firm_version_phone, S_IRUGO | S_IWUSR | S_IWGRP, set
 static DEVICE_ATTR(touchkey_firm_version_panel, S_IRUGO | S_IWUSR | S_IWGRP, set_touchkey_firm_version_read_show, NULL);
 /*PART*/
 /*end N1 firmware sync*/
-static DEVICE_ATTR(touchkey_brightness, S_IRUGO | S_IWUSR | S_IWGRP, NULL, brightness_control);
+static DEVICE_ATTR(touchkey_brightness, S_IRUGO | S_IWUSR | S_IWGRP, brightness_read, brightness_control);
 #ifdef CONFIG_GENERIC_BLN
 static DEVICE_ATTR(touchkey_bln_control, S_IWUGO, NULL, touchkey_bln_control);
 #endif
@@ -1310,6 +1613,8 @@ static int __init touchkey_init(void)
 	register_bln_implementation(&cypress_touchkey_bln);
 #endif
 
+	/* read key led voltage */
+	get_touch_key_led_voltage();
 	return ret;
 }
 
@@ -1323,6 +1628,7 @@ static void __exit touchkey_exit(void)
 	wake_lock_destroy(&cm_led_wake_lock);
 	del_timer(&cm_led_timer);
 	del_timer(&cm_notification_timer);
+	del_timer(&cm_breathing_timer);
 #endif
 
 #ifdef CONFIG_GENERIC_BLN
