@@ -85,7 +85,9 @@ cpoy_initramfs
 if [ "$BUILD_SELECT" = 'all' -o "$BUILD_SELECT" = 'a' ]; then
   echo ""
   echo "=====> cleaning"
-  make O=$OBJ_DIR clean
+  rm -rf out
+  mkdir -p $BIN_DIR
+  mkdir -p $OBJ_DIR
   cp -f ./arch/arm/configs/$BUILD_DEFCONFIG $OBJ_DIR/.config
   make -C $PWD O=$OBJ_DIR oldconfig || exit -1
 fi
