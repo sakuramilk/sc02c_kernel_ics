@@ -2263,7 +2263,7 @@ static struct regulator_consumer_supply led_torch_supply[] = {
 	};
 
 REGULATOR_INIT(ldo1, "VADC_3.3V_C210", 3300000, 3300000, 1,
-		REGULATOR_CHANGE_STATUS, 1);
+		REGULATOR_CHANGE_STATUS, 0);
 REGULATOR_INIT(ldo3, "VUSB_1.1V", 1100000, 1100000, 1,
 		REGULATOR_CHANGE_STATUS, 1);
 REGULATOR_INIT(ldo4, "VMIPI_1.8V", 1800000, 1800000, 1,
@@ -2998,19 +2998,33 @@ void sec_set_main_mic_bias(bool on)
 #endif
 }
 
-void sec_set_ldo1_constraints(int disabled)
+int sec_set_ldo1_constraints(int disabled)
 {
-#if 0				/* later */
-	/* VDD33_ADC */
-	ldo1_init_data.constraints.state_mem.disabled = disabled;
-	ldo1_init_data.constraints.state_mem.enabled = !disabled;
-#endif
+
+	struct regulator *regulator;
+
+	if (!disabled) {
+		regulator = regulator_get(NULL, "vadc_3.3v");
+		if (IS_ERR(regulator))
+			return -1;
+		regulator_enable(regulator);
+		regulator_put(regulator);
+	} else {
+		regulator = regulator_get(NULL, "vadc_3.3v");
+		if (IS_ERR(regulator))
+			return -1;
+		if (regulator_is_enabled(regulator))
+			regulator_force_disable(regulator);
+		regulator_put(regulator);
+	}
+
+	return 0;
 }
 
 static struct mc1n2_platform_data mc1n2_pdata = {
 	.set_main_mic_bias = sec_set_main_mic_bias,
 	.set_sub_mic_bias = sec_set_sub_mic_bias,
-	.set_adc_power_contraints = sec_set_ldo1_constraints,
+	.set_adc_power_constraints = sec_set_ldo1_constraints,
 };
 
 static void u1_sound_init(void)
@@ -5478,7 +5492,17 @@ static struct platform_device exynos4_busfreq = {
 };
 #endif
 
+#ifdef CONFIG_SEC_WATCHDOG_RESET
+static struct platform_device watchdog_reset_device = {
+	.name = "watchdog-reset",
+	.id = -1,
+};
+#endif
+
 static struct platform_device *smdkc210_devices[] __initdata = {
+#ifdef CONFIG_SEC_WATCHDOG_RESET
+	&watchdog_reset_device,
+#endif
 	&exynos4_device_pd[PD_MFC],
 	&exynos4_device_pd[PD_G3D],
 	&exynos4_device_pd[PD_LCD0],

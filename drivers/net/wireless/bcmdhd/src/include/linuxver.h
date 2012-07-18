@@ -37,7 +37,7 @@
 #else
 #include <linux/autoconf.h>
 #endif
-#endif
+#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 0) */
 #include <linux/module.h>
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 3, 0))
@@ -47,7 +47,7 @@
 #else
 #define __NO_VERSION__
 #endif
-#endif
+#endif /* (LINUX_VERSION_CODE < KERNEL_VERSION(2, 3, 0)) */
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 5, 0)
 #define module_param(_name_, _type_, _perm_)	MODULE_PARM(_name_, "i")
@@ -101,7 +101,10 @@
 #define	MY_INIT_WORK(_work, _func)	INIT_WORK(_work, _func)
 #else
 #define	MY_INIT_WORK(_work, _func)	INIT_WORK(_work, _func, _work)
+#if !(LINUX_VERSION_CODE == KERNEL_VERSION(2, 6, 18) && defined(RHEL_MAJOR) && \
+	(RHEL_MAJOR == 5))
 typedef void (*work_func_t)(void *work);
+#endif
 #endif
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 0))
@@ -512,18 +515,6 @@ typedef struct {
 	(tsk_ctl)->thr_pid = -1; \
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0))
-#define DAEMONIZE(a) daemonize(a); \
-	allow_signal(SIGKILL); \
-	allow_signal(SIGTERM);
-#else /* Linux 2.4 (w/o preemption patch) */
-#define RAISE_RX_SOFTIRQ() \
-	cpu_raise_softirq(smp_processor_id(), NET_RX_SOFTIRQ)
-#define DAEMONIZE(a) daemonize(); \
-	do { if (a) \
-		strncpy(current->comm, a, MIN(sizeof(current->comm), (strlen(a) + 1))); \
-	} while (0);
-#endif /* LINUX_VERSION_CODE  */
 
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 31))
@@ -591,10 +582,10 @@ do {									\
 
 #endif
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
-#define WL_DEV_IF(dev)          ((wl_if_t*)netdev_priv(dev))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 24))
+#define DEV_PRIV(dev)	(dev->priv)
 #else
-#define WL_DEV_IF(dev)          ((wl_if_t*)(dev)->priv)
+#define DEV_PRIV(dev)	netdev_priv(dev)
 #endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 20)

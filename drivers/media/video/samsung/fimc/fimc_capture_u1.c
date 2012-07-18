@@ -970,6 +970,11 @@ int fimc_s_fmt_vid_capture(struct file *file, void *fh, struct v4l2_format *f)
 #endif
 			fimc_calc_frame_ratio(ctrl, cap);
 		}
+#if defined(CONFIG_MACH_U1_BD) || defined(CONFIG_MACH_Q1_BD)
+		else {
+			fimc_calc_frame_ratio(ctrl, cap);
+		}
+#endif
 
 		if (!(mbus_fmt->width && mbus_fmt->height)) {
 			mbus_fmt->width = cap->fmt.width;
@@ -2168,6 +2173,7 @@ int fimc_dqbuf_capture(void *fh, struct v4l2_buffer *b)
 	struct fimc_buf_set *buf;
 	size_t length = 0;
 	int i, pp, ret = 0;
+	phys_addr_t start, end;
 
 	struct s3c_platform_fimc *pdata = to_fimc_plat(ctrl->dev);
 
