@@ -1,7 +1,7 @@
 /*
  * Linux cfg80211 driver - Dongle Host Driver (DHD) related
  *
- * Copyright (C) 1999-2012, Broadcom Corporation
+ * Copyright (C) 1999-2011, Broadcom Corporation
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -46,8 +46,6 @@ extern void dhd_pktfilter_offload_enable(dhd_pub_t * dhd, char *arg, int enable,
 
 static int dhd_dongle_up = FALSE;
 
-static s32 wl_dongle_up(struct net_device *ndev, u32 up);
-
 /**
  * Function implementations
  */
@@ -70,16 +68,6 @@ s32 dhd_cfg80211_down(struct wl_priv *wl)
 	return 0;
 }
 
-static s32 wl_dongle_up(struct net_device *ndev, u32 up)
-{
-	s32 err = 0;
-
-	err = wldev_ioctl(ndev, WLC_UP, &up, sizeof(up), true);
-	if (unlikely(err)) {
-		WL_ERR(("WLC_UP error (%d)\n", err));
-	}
-	return err;
-}
 s32 dhd_config_dongle(struct wl_priv *wl, bool need_lock)
 {
 #ifndef DHD_SDALIGN
@@ -99,11 +87,6 @@ s32 dhd_config_dongle(struct wl_priv *wl, bool need_lock)
 	if (need_lock)
 		rtnl_lock();
 
-	err = wl_dongle_up(ndev, 0);
-	if (unlikely(err)) {
-		WL_ERR(("wl_dongle_up failed\n"));
-		goto default_conf_out;
-	}
 	dhd_dongle_up = true;
 
 default_conf_out:
@@ -480,7 +463,7 @@ void wl_cfg80211_btcoex_deinit(struct wl_priv *wl)
 	kfree(wl->btcoex_info);
 	wl->btcoex_info = NULL;
 }
-#endif /* COEX_DHCP */
+#endif
 
 int wl_cfg80211_set_btcoex_dhcp(struct net_device *dev, char *command)
 {

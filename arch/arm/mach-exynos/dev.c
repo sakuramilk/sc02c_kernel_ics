@@ -17,11 +17,7 @@
 #include <linux/slab.h>
 
 #include <mach/dev.h>
-#ifdef CONFIG_ARCH_EXYNOS4
-#include <mach/busfreq_exynos4.h>
-#else
-#include <mach/busfreq_exynos5.h>
-#endif
+#include <mach/busfreq.h>
 
 static LIST_HEAD(domains_list);
 static DEFINE_MUTEX(domains_mutex);

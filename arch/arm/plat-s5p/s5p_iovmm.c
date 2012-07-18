@@ -187,14 +187,14 @@ void iovmm_deactivate(struct device *dev)
 	spin_unlock_irqrestore(&vmm->lock, flags);
 }
 
-dma_addr_t iovmm_map(struct device *dev, struct scatterlist *sg, off_t offset,
-								size_t size)
+dma_addr_t iovmm_map(struct device *dev, struct scatterlist *sg)
 {
-	off_t start_off;
+	size_t size = 0;
+	off_t start_off = offset_in_page(sg_phys(sg));
 	dma_addr_t addr, start = 0;
-	size_t mapped_size = 0;
 	struct s5p_vm_region *region;
 	struct s5p_iovmm *vmm;
+	struct scatterlist *tmpsg;
 	int order;
 
 	BUG_ON(!sg);
@@ -203,13 +203,15 @@ dma_addr_t iovmm_map(struct device *dev, struct scatterlist *sg, off_t offset,
 	if (WARN_ON(!vmm))
 		goto err_map_nomem;
 
-	for (; sg_dma_len(sg) < offset; sg = sg_next(sg))
-		offset -= sg_dma_len(sg);
+	tmpsg = sg;
+	size = start_off;
+	do {
+		size += sg_dma_len(tmpsg);
+	} while ((tmpsg = sg_next(tmpsg)));
+
+	size = PAGE_ALIGN(size);
 
 	spin_lock(&vmm->lock);
-
-	start_off = offset_in_page(sg_phys(sg) + offset);
-	size = PAGE_ALIGN(size + start_off);
 
 	order = __fls(min(size, (size_t)SZ_1M));
 	start = (dma_addr_t)gen_pool_alloc_aligned(vmm->vmm_pool, size, order);
@@ -222,27 +224,11 @@ dma_addr_t iovmm_map(struct device *dev, struct scatterlist *sg, off_t offset,
 		size_t len;
 
 		phys = sg_phys(sg);
-		len = sg_dma_len(sg);
-
-		if (offset > 0) {
-			len -= offset;
-			phys += offset;
-			offset = 0;
-		}
-
-		if (offset_in_page(phys)) {
-			len += offset_in_page(phys);
-			phys = round_down(phys, PAGE_SIZE);
-		}
-
-		len = PAGE_ALIGN(len);
-
-		if (len > (size - mapped_size))
-			len = size - mapped_size;
+		len = PAGE_ALIGN(sg_dma_len(sg) + offset_in_page(phys));
+		phys = round_down(phys, PAGE_SIZE);
 
 		while (len > 0) {
 			order = min3(__ffs(phys), __ffs(addr), __fls(len));
-
 			if (iommu_map(vmm->domain, addr, phys,
 							order - PAGE_SHIFT, 0))
 				goto err_map_map;
@@ -250,14 +236,8 @@ dma_addr_t iovmm_map(struct device *dev, struct scatterlist *sg, off_t offset,
 			addr += (1 << order);
 			phys += (1 << order);
 			len -= (1 << order);
-			mapped_size += (1 << order);
 		}
-	} while ((sg = sg_next(sg)) && (mapped_size < size));
-
-	BUG_ON(mapped_size > size);
-
-	if (mapped_size < size)
-		goto err_map_map;
+	} while ((sg = sg_next(sg)));
 
 	region = kmalloc(sizeof(*region), GFP_KERNEL);
 	if (!region)
@@ -275,19 +255,14 @@ dma_addr_t iovmm_map(struct device *dev, struct scatterlist *sg, off_t offset,
 err_map_map:
 	while (addr >= start) {
 		int order;
-		mapped_size = addr - start;
+		size_t size = addr - start;
 
-		if (mapped_size == 0) /* Mapping failed at the first page */
-			mapped_size = size;
-
-		BUG_ON(mapped_size < PAGE_SIZE);
-
-		order = min(__fls(mapped_size), __ffs(start));
+		order = min(__fls(size), __ffs(start));
 
 		iommu_unmap(vmm->domain, start, order - PAGE_SHIFT);
 
 		start += 1 << order;
-		mapped_size -= 1 << order;
+		size -= 1 << order;
 	}
 	gen_pool_free(vmm->vmm_pool, start, size);
 

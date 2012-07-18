@@ -39,8 +39,6 @@
 #include "fimg2d_ctx.h"
 #include "fimg2d_helper.h"
 
-#define CTX_TIMEOUT	msecs_to_jiffies(5000)
-
 static struct fimg2d_control *info;
 
 static void fimg2d_worker(struct work_struct *work)
@@ -101,10 +99,14 @@ next:
 
 static void fimg2d_context_wait(struct fimg2d_context *ctx)
 {
+	int ret;
+
 	fimg2d_debug("ctx %p is waiting for bitblt complete\n", ctx);
 
 	while (atomic_read(&ctx->ncmd)) {
-		if (wait_event_timeout(ctx->wait_q, !atomic_read(&ctx->ncmd), CTX_TIMEOUT)) {
+		ret = wait_event_timeout(ctx->wait_q, !atomic_read(&ctx->ncmd),
+				msecs_to_jiffies(1000));
+		if (ret) {
 			fimg2d_debug("ctx %p wake up\n", ctx);
 		} else {
 			if (info->err) {
@@ -203,16 +205,12 @@ static long fimg2d_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 #endif
 		ret = fimg2d_add_command(info, ctx, u.blit);
 		if (!ret) {
-#if defined(CONFIG_BUSFREQ_OPP) || defined(CONFIG_BUSFREQ_LOCK_WRAPPER)
-#if defined(CONFIG_CPU_EXYNOS4212) || defined(CONFIG_CPU_EXYNOS4412)
+#ifdef CONFIG_BUSFREQ_OPP
 			dev_lock(info->bus_dev, info->dev, 160160);
 #endif
-#endif
 			fimg2d_request_bitblt(ctx);
-#if defined(CONFIG_BUSFREQ_OPP) || defined(CONFIG_BUSFREQ_LOCK_WRAPPER)
-#if defined(CONFIG_CPU_EXYNOS4212) || defined(CONFIG_CPU_EXYNOS4412)
+#ifdef CONFIG_BUSFREQ_OPP
 			dev_unlock(info->bus_dev, info->dev);
-#endif
 #endif
 		}
 #ifdef PERF_PROFILE
@@ -367,11 +365,9 @@ static int fimg2d_probe(struct platform_device *pdev)
 	fimg2d_debug("enable runtime pm\n");
 #endif
 
-#if defined(CONFIG_BUSFREQ_OPP) || defined(CONFIG_BUSFREQ_LOCK_WRAPPER)
-#if defined(CONFIG_CPU_EXYNOS4212) || defined(CONFIG_CPU_EXYNOS4412)
+#ifdef CONFIG_BUSFREQ_OPP
 	/* To lock bus frequency in OPP mode */
 	info->bus_dev = dev_get("exynos-busfreq");
-#endif
 #endif
 	s5p_sysmmu_set_fault_handler(info->dev, fimg2d_sysmmu_fault_handler);
 	fimg2d_debug("register sysmmu page fault handler\n");

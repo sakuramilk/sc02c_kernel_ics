@@ -141,7 +141,6 @@ enum mmc_blk_status {
 	MMC_BLK_ABORT,
 	MMC_BLK_DATA_ERR,
 	MMC_BLK_ECC_ERR,
-	MMC_BLK_NOMEDIUM,
 };
 
 module_param(perdev_minors, int, 0444);
@@ -587,7 +586,6 @@ static int get_card_status(struct mmc_card *card, u32 *status, int retries)
 	return err;
 }
 
-#define ERR_NOMEDIUM	3
 #define ERR_RETRY	2
 #define ERR_ABORT	1
 #define ERR_CONTINUE	0
@@ -659,9 +657,6 @@ static int mmc_blk_cmd_recovery(struct mmc_card *card, struct request *req,
 	u32 status, stop_status = 0;
 	int err, retry;
 
-	if (mmc_card_removed(card))
-		return ERR_NOMEDIUM;
-
 	/*
 	 * Try to get card status which indicates both the card state
 	 * and why there was no response.  If the first attempt fails,
@@ -678,12 +673,8 @@ static int mmc_blk_cmd_recovery(struct mmc_card *card, struct request *req,
 	}
 
 	/* We couldn't get a response from the card.  Give up. */
-	if (err) {
-		/* Check if the card is removed */
-		if (mmc_detect_card_removed(card->host))
-			return ERR_NOMEDIUM;
+	if (err)
 		return ERR_ABORT;
-	}
 
 	/* Flag ECC errors */
 	if ((status & R1_CARD_ECC_FAILED) ||
@@ -951,25 +942,11 @@ static int mmc_blk_err_check(struct mmc_card *card,
 	 */
 	if (brq->sbc.error || brq->cmd.error || brq->stop.error ||
 	    brq->data.error) {
-#ifdef CONFIG_MACH_M0	/* dh0421.hwang */
-		if (mmc_card_mmc(card)) {
-			printk(KERN_ERR "[TEST] brq->sbc.opcode=%d,"
-					"brq->cmd.opcode=%d.\n",
-					brq->sbc.opcode, brq->cmd.opcode);
-			printk(KERN_ERR "[TEST] brq->sbc.error=%d,"
-					"brq->cmd.error=%d, brq->stop.error=%d,"
-					"brq->data.error=%d.\n", brq->sbc.error,
-					brq->cmd.error, brq->stop.error,
-					brq->data.error);
-		}
-#endif
 		switch (mmc_blk_cmd_recovery(card, req, brq, &ecc_err)) {
 		case ERR_RETRY:
 			return MMC_BLK_RETRY;
 		case ERR_ABORT:
 			return MMC_BLK_ABORT;
-		case ERR_NOMEDIUM:
-			return MMC_BLK_NOMEDIUM;
 		case ERR_CONTINUE:
 			break;
 		}
@@ -1133,6 +1110,13 @@ static void mmc_blk_rw_rq_prep(struct mmc_queue_req *mqrq,
 	if (disable_multi && brq->data.blocks > 1)
 		brq->data.blocks = 1;
 
+	if (card->host && mmc_card_sd(card) &&
+	    !mmc_host_sd_present(card->host)) {
+		printk(KERN_DEBUG "%s: Bad Request. SDcard removed.\n",
+		       req->rq_disk->disk_name);
+		goto err_sd_removed;
+	}
+
 	if (brq->data.blocks > 1 || do_rel_wr) {
 		/* SPI multiblock writes terminate using a special
 		 * token, not a STOP_TRANSMISSION request.
@@ -1215,6 +1199,13 @@ static void mmc_blk_rw_rq_prep(struct mmc_queue_req *mqrq,
 	mqrq->mmc_active.err_check = mmc_blk_err_check;
 
 	mmc_queue_bounce_pre(mqrq);
+	return;
+	
+ err_sd_removed:
+	spin_lock_irq(&md->lock);
+	__blk_end_request_all(req, -EIO);
+	spin_unlock_irq(&md->lock);
+	return;
 }
 
 static u8 mmc_blk_prep_packed_list(struct mmc_queue *mq, struct request *req)
@@ -1236,11 +1227,9 @@ static u8 mmc_blk_prep_packed_list(struct mmc_queue *mq, struct request *req)
 			!card->ext_csd.packed_event_en)
 		goto no_packed;
 
-	if (rq_data_dir(cur) == READ &&
-			(card->host->caps2 & MMC_CAP2_PACKED_RD))
+	if (rq_data_dir(cur) == READ)
 		max_packed_rw = card->ext_csd.max_packed_reads;
-	else if ((rq_data_dir(cur) == WRITE) &&
-			(card->host->caps2 & MMC_CAP2_PACKED_WR))
+	else
 		max_packed_rw = card->ext_csd.max_packed_writes;
 
 	if (max_packed_rw == 0)
@@ -1805,8 +1794,6 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 			if (!ret)
 				goto start_new_req;
 			break;
-		case MMC_BLK_NOMEDIUM:
-			goto cmd_abort;
 		}
 
 		if (ret) {
@@ -1836,10 +1823,6 @@ snd_packed_rd:
 	return 1;
 
  cmd_abort:
-	spin_lock_irq(&md->lock);
-	if (mmc_card_removed(card))
-		req->cmd_flags |= REQ_QUIET;
-	spin_unlock_irq(&md->lock);
 	if (mq_rq->packed_cmd == MMC_PACKED_NONE) {
 		spin_lock_irq(&md->lock);
 		while (ret)

@@ -25,6 +25,7 @@ source "drivers/gpu/stub/Kconfig"
 
 source "drivers/gpu/ion/Kconfig"
 
+
 config VGASTATE
        tristate
        default n
@@ -2064,7 +2065,7 @@ config FB_EXYNOS_FIMD_V8
 config FB_EYYNOS_TRACE_UNDERRUN
 	bool "Framebuffer FIFO underrun trace"
 	depends on FB_S3C && ARCH_EXYNOS5
-	default y
+	default n
 	---help---
 
 config FB_EXYNOS_FIMD_MC

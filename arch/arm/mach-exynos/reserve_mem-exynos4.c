@@ -49,7 +49,6 @@ struct s5p_media_device media_devs[] = {
 	},
 #endif
 
-#ifdef CONFIG_MACH_U1
 #ifdef CONFIG_ANDROID_PMEM_MEMSIZE_PMEM
 	{
 		.id = S5P_MDEV_PMEM,
@@ -68,7 +67,6 @@ struct s5p_media_device media_devs[] = {
 		.memsize = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM_GPU1 * SZ_1K,
 		.paddr = 0,
 	},
-#endif
 #endif
 
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC0

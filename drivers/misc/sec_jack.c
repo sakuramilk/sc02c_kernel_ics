@@ -38,11 +38,7 @@
 
 #define MAX_ZONE_LIMIT		10
 /* keep this value if you support double-pressed concept */
-#ifdef CONFIG_TARGET_LOCALE_KOR
-#define SEND_KEY_CHECK_TIME_MS	20		/* 20ms - GB VOC in KOR*/
-#else
 #define SEND_KEY_CHECK_TIME_MS	40		/* 100ms */
-#endif
 #define WAKE_LOCK_TIME		(HZ * 5)	/* 5 sec */
 #define EAR_CHECK_LOOP_CNT	10
 
@@ -400,9 +396,8 @@ void sec_jack_buttons_work(struct work_struct *work)
 		input_report_key(hi->input_dev, hi->pressed_code, 0);
 		switch_set_state(&switch_sendend, 0);
 		input_sync(hi->input_dev);
-		//pr_info("%s: keycode=%d, is released\n", __func__,
-		//	hi->pressed_code);
-		pr_info("sec_jack: bwork called...\n");
+		pr_info("%s: keycode=%d, is released\n", __func__,
+			hi->pressed_code);
 		return;
 	}
 
@@ -416,9 +411,8 @@ void sec_jack_buttons_work(struct work_struct *work)
 			input_report_key(hi->input_dev, btn_zones[i].code, 1);
 			switch_set_state(&switch_sendend, 1);
 			input_sync(hi->input_dev);
-			//pr_info("%s: keycode=%d, is pressed\n", __func__,
-			//	btn_zones[i].code);
-			pr_info("sec_jack: bwork done...\n");
+			pr_info("%s: keycode=%d, is pressed\n", __func__,
+				btn_zones[i].code);
 			return;
 		}
 

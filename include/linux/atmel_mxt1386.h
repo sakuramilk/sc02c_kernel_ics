@@ -11,14 +11,8 @@
  *  for more details.
  *
  */
-
-#ifndef _LINUX_MXT1386_H
-#define _LINUX_MXT1386_H
-#include <linux/wakelock.h>
-
-#ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
-#endif
+#include <linux/wakelock.h>
 
 /*Avoid Touch lockup due to wrong auto calibratoin*/
 /*Loose the calibration threshold to recalibrate easily at anti-touch
@@ -471,8 +465,6 @@
 #define TSP_STATE_PRESS		1
 #define TSP_STATE_MOVE		2
 
-extern struct class *sec_class;
-
 /* Device Info descriptor */
 /* Parsed from maXTouch "Id information" inside device */
 struct mxt_device_info {
@@ -764,11 +756,6 @@ struct mxt_data {
 	struct early_suspend early_suspend;
 #endif
 	struct multi_touch_info mtouch_info[MXT_MAX_NUM_TOUCHES];
-#ifdef CONFIG_SEC_TOUCHSCREEN_DVFS_LOCK
-	struct delayed_work dvfs_dwork;
-	struct device *bus_dev;
-	u32 cpufreq_level;
-#endif
 	bool new_msgs;
 	bool fherr_cnt_no_ta_calready;
 	char phys_name[32];
@@ -852,5 +839,3 @@ u8 mxt_valid_interrupt(void);
 #endif
 
 void	mxt_hw_reset(void);
-
-#endif	/* _LINUX_MXT1386_H */

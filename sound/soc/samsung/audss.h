@@ -28,6 +28,4 @@ enum {
 };
 
 void audss_clk_enable(bool enable);
-void audss_suspend(void);
-void audss_resume(void);
 #endif /* __SND_SOC_SAMSUNG_AUDSS_H */

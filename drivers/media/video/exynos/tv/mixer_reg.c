@@ -155,7 +155,7 @@ void mxr_reg_reset(struct mxr_device *mdev)
 	mxr_vsync_set_update(mdev, MXR_DISABLE);
 
 	/* set output in RGB888 mode */
-	mxr_write(mdev, MXR_CFG, MXR_CFG_OUT_RGB888);
+	mxr_write(mdev, MXR_CFG, MXR_CFG_OUT_YUV444);
 
 	/* 16 beat burst in DMA */
 	mxr_write_mask(mdev, MXR_STATUS, MXR_STATUS_16_BURST,
@@ -667,16 +667,6 @@ void mxr_reg_set_mbus_fmt(struct mxr_device *mdev,
 	spin_lock_irqsave(&mdev->reg_slock, flags);
 	mxr_vsync_set_update(mdev, MXR_DISABLE);
 
-	/* choosing between YUV444 and RGB888 as mixer output type */
-	if (mdev->sub_mxr[MXR_SUB_MIXER0].mbus_fmt[MXR_PAD_SOURCE_GRP0].code ==
-		V4L2_MBUS_FMT_YUV8_1X24) {
-		val = MXR_CFG_OUT_YUV444;
-		fmt->code = V4L2_MBUS_FMT_YUV8_1X24;
-	} else {
-		val = MXR_CFG_OUT_RGB888;
-		fmt->code = V4L2_MBUS_FMT_XRGB8888_4X8_LE;
-	}
-
 	/* choosing between interlace and progressive mode */
 	if (fmt->field == V4L2_FIELD_INTERLACED)
 		val |= MXR_CFG_SCAN_INTERLACE;
@@ -695,8 +685,7 @@ void mxr_reg_set_mbus_fmt(struct mxr_device *mdev,
 	else
 		WARN(1, "unrecognized mbus height %u!\n", fmt->height);
 
-	mxr_write_mask(mdev, MXR_CFG, val, MXR_CFG_SCAN_MASK |
-			MXR_CFG_OUT_MASK);
+	mxr_write_mask(mdev, MXR_CFG, val, MXR_CFG_SCAN_MASK);
 
 	val = (fmt->field == V4L2_FIELD_INTERLACED) ? ~0 : 0;
 	vp_write_mask(mdev, VP_MODE, val,
@@ -706,38 +695,34 @@ void mxr_reg_set_mbus_fmt(struct mxr_device *mdev,
 	spin_unlock_irqrestore(&mdev->reg_slock, flags);
 }
 
-void mxr_reg_local_path_set(struct mxr_device *mdev, int mxr0_gsc, int mxr1_gsc,
+void mxr_reg_local_path_set(struct mxr_device *mdev, int mxr_num, int gsc_num,
 		u32 flags)
 {
 	u32 val = 0;
-	int mxr0_local = mdev->sub_mxr[MXR_SUB_MIXER0].local;
-	int mxr1_local = mdev->sub_mxr[MXR_SUB_MIXER1].local;
+	int mxr0_use = mdev->sub_mxr[MXR_SUB_MIXER0].use;
+	int mxr1_use = mdev->sub_mxr[MXR_SUB_MIXER1].use;
 
-	if (mxr0_local && !mxr1_local) { /* 1-path : sub-mixer0 */
+	if (mxr0_use && !mxr1_use) { /* 1-path : sub-mixer0 */
 		val  = MXR_TVOUT_CFG_ONE_PATH;
 		val |= MXR_TVOUT_CFG_PATH_MIXER0;
-	} else if (!mxr0_local && mxr1_local) { /* 1-path : sub-mixer1 */
+	} else if (!mxr0_use && mxr1_use) { /* 1-path : sub-mixer1 */
 		val  = MXR_TVOUT_CFG_ONE_PATH;
 		val |= MXR_TVOUT_CFG_PATH_MIXER1;
-	} else if (mxr0_local && mxr1_local) { /* 2-path */
+	} else if (mxr0_use && mxr1_use) /* 2-path */
 		val  = MXR_TVOUT_CFG_TWO_PATH;
-		val |= MXR_TVOUT_CFG_STEREO_SCOPIC;
-	}
 
-	mxr_write(mdev, MXR_TVOUT_CFG, val);
+	mxr_write_mask(mdev, MXR_TVOUT_CFG, val, MXR_TVOUT_CFG_PATH_MASK);
 
 	/* set local path gscaler to mixer */
 	val = readl(SYSREG_DISP1BLK_CFG);
 	val |= DISP1BLK_CFG_FIFORST_DISP1;
-	val &= ~DISP1BLK_CFG_MIXER_MASK;
 	if (flags & MEDIA_LNK_FL_ENABLED) {
-		if (mxr0_local) {
+		if (mxr_num == MXR_SUB_MIXER0) {
 			val |= DISP1BLK_CFG_MIXER0_VALID;
-			val |= DISP1BLK_CFG_MIXER0_SRC_GSC(mxr0_gsc);
-		}
-		if (mxr1_local) {
+			val |= DISP1BLK_CFG_MIXER0_SRC_GSC(gsc_num);
+		} else if (mxr_num == MXR_SUB_MIXER1) {
 			val |= DISP1BLK_CFG_MIXER1_VALID;
-			val |= DISP1BLK_CFG_MIXER1_SRC_GSC(mxr1_gsc);
+			val |= DISP1BLK_CFG_MIXER1_SRC_GSC(gsc_num);
 		}
 	}
 	mxr_dbg(mdev, "%s: SYSREG value = 0x%x\n", __func__, val);

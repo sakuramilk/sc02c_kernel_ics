@@ -180,26 +180,22 @@ static int s5p_dp_read_edid(struct s5p_dp_device *dp)
 
 static int s5p_dp_handle_edid(struct s5p_dp_device *dp)
 {
-	u8 buf[12] = {0,};
+	u8 buf[12];
 	int i;
-	int retval = 0;
+	int retval;
 
 	/* Read DPCD 0x0000-0x000b */
 	s5p_dp_read_bytes_from_dpcd(dp,
 		DPCD_ADDR_DPCD_REV,
 		12, buf);
 
-	for (i = 0; i < 12; i++)
-		printk(KERN_INFO "data[%d] : %x\n", i, buf[i]);
-
-#if 0
 	/* Read EDID */
 	for (i = 0; i < 3; i++) {
 		retval = s5p_dp_read_edid(dp);
 		if (retval == 0)
 			break;
 	}
-#endif
+
 	return retval;
 }
 
@@ -2255,8 +2251,8 @@ static int __devinit s5p_dp_probe(struct platform_device *pdev)
 	}
 
 	pm_runtime_get_sync(dp->dev);
-/*
-	// to do check after wakeup
+
+#if 0 // to do check after wakeup
 	dp->irq = platform_get_irq(pdev, 0);
 	if (!dp->irq) {
 		dev_err(&pdev->dev, "failed to get irq\n");
@@ -2270,7 +2266,7 @@ static int __devinit s5p_dp_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to request irq\n");
 		goto err_ioremap;
 	}
-*/
+#endif
 	dp->video_info = pdata->video_info;
 	if (pdata->phy_init)
 		pdata->phy_init();
@@ -2279,7 +2275,6 @@ static int __devinit s5p_dp_probe(struct platform_device *pdev)
 
 	s5p_dp_init_dp(dp);
 
-#if 0
 	if (!soc_is_exynos5250()) {
 		ret = s5p_dp_detect_hpd(dp);
 		if (ret) {
@@ -2289,16 +2284,6 @@ static int __devinit s5p_dp_probe(struct platform_device *pdev)
 
 		s5p_dp_handle_edid(dp);
 	}
-
-#endif
-	ret = s5p_dp_detect_hpd(dp);
-	if (ret) {
-		dev_err(&pdev->dev, "unable to detect hpd\n");
-		goto err_irq;
-	}
-	dev_info(&pdev->dev, "hpd detect : success\n");
-
-	s5p_dp_handle_edid(dp);
 
 	ret = s5p_dp_set_link_train(dp, dp->video_info->lane_count,
 				dp->video_info->link_rate);

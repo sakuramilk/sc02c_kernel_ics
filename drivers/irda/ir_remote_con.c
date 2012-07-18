@@ -22,7 +22,6 @@
 #define MICRO_SEC 1000000
 
 static struct regulator	*regulator;
-static int regulator_status = -1;
 
 struct ir_remocon_data {
 	struct mutex mutex;
@@ -59,7 +58,6 @@ static void ir_remocon_send(struct ir_remocon_data *data)
 			goto out;
 
 		regulator_enable(regulator);
-		regulator_status = 1;
 	}
 
 	if (data->pwr_en != -1)
@@ -136,11 +134,9 @@ static void ir_remocon_send(struct ir_remocon_data *data)
 	if (data->pwr_en != -1)
 		gpio_direction_output(data->pwr_en, 0);
 
-	if ((data->pwr_en == -1) && (regulator_status == 1)) {
+	if (data->pwr_en == -1) {
 		regulator_force_disable(regulator);
 		regulator_put(regulator);
-
-		regulator_status = -1;
 	}
 out: ;
 }
@@ -157,7 +153,6 @@ static void ir_remocon_send_test(struct ir_remocon_data *data)
 			goto out;
 
 		regulator_enable(regulator);
-		regulator_status = 1;
 	}
 
 	if (data->pwr_en != -1)
@@ -180,11 +175,9 @@ static void ir_remocon_send_test(struct ir_remocon_data *data)
 	if (data->pwr_en != -1)
 		gpio_direction_output(data->pwr_en, 0);
 
-	if ((data->pwr_en == -1) && (regulator_status == 1)) {
+	if (data->pwr_en == -1) {
 		regulator_force_disable(regulator);
 		regulator_put(regulator);
-
-		regulator_status = -1;
 	}
 out: ;
 }

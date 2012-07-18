@@ -37,7 +37,6 @@ struct mfc_enc_ctx {
 
 	/* init */
 	enum enc_pc pixelcache;
-	unsigned int numdpb;
 
 	/* init | exec */
 	unsigned int framemap;

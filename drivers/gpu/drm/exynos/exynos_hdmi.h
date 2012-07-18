@@ -42,7 +42,6 @@ struct hdmi_context {
 	struct device			*dev;
 	struct drm_device		*drm_dev;
 	struct fb_videomode		*default_timing;
-	unsigned int			is_v13:1;
 	unsigned int			default_win;
 	unsigned int			default_bpp;
 	bool				hpd_handle;

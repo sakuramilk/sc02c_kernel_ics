@@ -67,13 +67,12 @@ static void srp_pending_ctrl(int ctrl)
 {
 	unsigned int srp_ctrl = readl(srp.commbox + SRP_PENDING);
 
-	if (ctrl == srp_ctrl) {
-		srp_info("Already set SRP pending control[%d]\n", ctrl);
+	srp.is_pending = srp_ctrl ? STALL : RUN;
+	if (ctrl == srp.is_pending)
 		return;
-	}
 
-	writel(ctrl, srp.commbox + SRP_PENDING);
 	srp.is_pending = ctrl;
+	writel(srp.is_pending, srp.commbox + SRP_PENDING);
 
 	srp_debug("Current SRP Status[%s]\n",
 			readl(srp.commbox + SRP_PENDING) ? "STALL" : "RUN");
@@ -119,6 +118,8 @@ static void srp_reset(void)
 
 	srp_debug("Reset\n");
 
+	srp_pending_ctrl(STALL);
+
 	writel(reg, srp.commbox + SRP_FRAME_INDEX);
 	writel(reg, srp.commbox + SRP_READ_BITSTREAM_SIZE);
 
@@ -128,6 +129,7 @@ static void srp_reset(void)
 
 	/* Store Total Count */
 	srp.decoding_started = 0;
+	srp.first_decoding = 1;
 
 	/* Next IBUF is IBUF0 */
 	srp.ibuf_next = 0;
@@ -150,6 +152,11 @@ static void srp_reset(void)
 	srp.prepare_for_eos = 0;
 	srp.play_done = 0;
 	srp.pcm_size = 0;
+}
+
+static void srp_stop(void)
+{
+	srp_pending_ctrl(STALL);
 }
 
 static void srp_fill_ibuf(void)
@@ -233,9 +240,9 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 	mutex_lock(&srp_mutex);
 	if (!srp.decoding_started) {
 		srp_fill_ibuf();
+		srp_debug("First Start decoding!!\n");
 		srp_pending_ctrl(RUN);
-		srp_info("First Start decoding!![%d]\n",
-			readl(srp.commbox + SRP_PENDING));
+		if (!srp.decoding_started)
 			srp.decoding_started = 1;
 	}
 	mutex_unlock(&srp_mutex);
@@ -367,7 +374,7 @@ static void srp_commbox_deinit(void)
 	unsigned int reg = 0;
 
 	/* Reset value */
-	srp_pending_ctrl(STALL);
+	srp_stop();
 	srp.decoding_started = 0;
 	writel(reg, srp.commbox + SRP_INTERRUPT);
 }
@@ -445,9 +452,10 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	case SRP_FLUSH:
 		srp_debug("SRP_FLUSH\n");
-		srp_set_default_fw();
+		srp_stop();
 		srp_flush_ibuf();
 		srp_flush_obuf();
+		srp_set_default_fw();
 		srp_reset();
 		break;
 
@@ -513,7 +521,7 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			if (srp.dec_info.sample_rate && srp.dec_info.channels) {
 				srp_info("Already get dec info!\n");
 			} else {
-				ret = wait_event_interruptible_timeout(decinfo_wq,
+				ret = wait_event_interruptible_timeout(read_wq,
 						srp.dec_info.channels != 0, HZ / 2);
 				if (!ret) {
 					srp_err("Couldn't Get Decoding info!!!\n");
@@ -553,6 +561,31 @@ static int srp_open(struct inode *inode, struct file *file)
 
 	srp_set_default_fw();
 
+	srp.wbuf = kzalloc(srp.wbuf_size, GFP_KERNEL);
+	if (!srp.wbuf) {
+		srp_err("Failed to allocation for WBUF!\n");
+		return -ENOMEM;
+	}
+	srp_info("Allocation WBUF [%ld]Bytes\n", srp.wbuf_size);
+
+	srp.sp_data.dmem = kzalloc(DMEM_SIZE, GFP_KERNEL);
+	if (!srp.sp_data.dmem) {
+		srp_err("Failed to alloc dmem for suspend/resume!\n");
+		return -ENOMEM;
+	}
+
+	srp.sp_data.wbuf = kzalloc(WBUF_SIZE * 2, GFP_KERNEL);
+	if (!srp.sp_data.wbuf) {
+		srp_err("Failed to alloc WBUF for suspend/resume!\n");
+		return -ENOMEM;
+	}
+
+	srp.sp_data.obuf = kzalloc(OBUF_SIZE, GFP_KERNEL);
+	if (!srp.sp_data.obuf) {
+		srp_err("Failed to alloc OBUF for suspend/resume\n");
+		return -ENOMEM;
+	}
+
 	srp.dec_info.channels = 0;
 	srp.dec_info.sample_rate = 0;
 	srp.frame_size = 0;
@@ -569,7 +602,21 @@ static int srp_release(struct inode *inode, struct file *file)
 	srp_info("Released\n");
 
 	mutex_lock(&srp_mutex);
+
+	if (srp.wbuf)
+		kfree(srp.wbuf);
+
+	if (srp.sp_data.dmem)
+		kfree(srp.sp_data.dmem);
+
+	if (srp.sp_data.wbuf)
+		kfree(srp.sp_data.wbuf);
+
+	if (srp.sp_data.obuf)
+		kfree(srp.sp_data.obuf);
+
 	srp.is_opened = 0;
+
 	mutex_unlock(&srp_mutex);
 
 	return 0;
@@ -626,6 +673,7 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	unsigned int irq_code_req;
 	unsigned int wakeup_read = 0;
 	unsigned int wakeup_decinfo = 0;
+	unsigned int pending_off = 0;
 
 	srp_debug("IRQ: Code [0x%x], Pending [%s], CFGR [0x%x]", irq_code,
 			readl(srp.commbox + SRP_PENDING) ? "STALL" : "RUN",
@@ -669,9 +717,18 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 			if ((irq_code & SRP_INTR_CODE_OBUF_MASK)
 				==  SRP_INTR_CODE_OBUF0_FULL) {
 				srp_debug("OBUF0 FULL\n");
+
+				if (srp.first_decoding)
+					pending_off = 1;
+				else
 					srp.obuf_fill_done[0] = 1;
 			} else {
 				srp_debug("OBUF1 FULL\n");
+				if (srp.first_decoding) {
+					srp.first_decoding = 0;
+					srp.obuf_fill_done[0] = 1;
+				}
+
 				srp.obuf_fill_done[1] = 1;
 			}
 
@@ -706,8 +763,12 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	writel(0, srp.commbox + SRP_INTERRUPT_CODE);
 	writel(0, srp.commbox + SRP_INTERRUPT);
 
+	if (pending_off) {
+		srp_pending_ctrl(RUN);
+		wakeup_read = 0;
+	}
+
 	if (wakeup_read) {
-		srp.is_pending = 1;
 		if (waitqueue_active(&read_wq))
 			wake_up_interruptible(&read_wq);
 	}
@@ -794,18 +855,6 @@ static int srp_prepare_fw_buff(struct device *dev)
 	srp.fw_info.data_pa = mem_paddr;
 	srp.fw_info.data = phys_to_virt(srp.fw_info.data_pa);
 	mem_paddr += DATA_SIZE_MAX;
-
-	srp.wbuf = phys_to_virt(mem_paddr);
-	mem_paddr += WBUF_SIZE;
-
-	srp.sp_data.dmem = phys_to_virt(mem_paddr);
-	mem_paddr += DMEM_SIZE;
-
-	srp.sp_data.wbuf = phys_to_virt(mem_paddr);
-	mem_paddr += WBUF_SIZE * 2;
-
-	srp.sp_data.obuf = phys_to_virt(mem_paddr);
-	mem_paddr += OBUF_SIZE;
 #else
 	srp.fw_info.vliw = dma_alloc_writecombine(dev, VLIW_SIZE,
 				&srp.fw_info.vliw_pa, GFP_KERNEL);
@@ -827,32 +876,7 @@ static int srp_prepare_fw_buff(struct device *dev)
 		srp_err("Failed to alloc for data\n");
 		return -ENOMEM;
 	}
-
-	srp.wbuf = kzalloc(srp.wbuf_size, GFP_KERNEL);
-	if (!srp.wbuf) {
-		srp_err("Failed to allocation for WBUF!\n");
-		return -ENOMEM;
-	}
-
-	srp.sp_data.dmem = kzalloc(DMEM_SIZE, GFP_KERNEL);
-	if (!srp.sp_data.dmem) {
-		srp_err("Failed to alloc dmem for suspend/resume!\n");
-		return -ENOMEM;
-	}
-
-	srp.sp_data.wbuf = kzalloc(WBUF_SIZE * 2, GFP_KERNEL);
-	if (!srp.sp_data.wbuf) {
-		srp_err("Failed to alloc WBUF for suspend/resume!\n");
-		return -ENOMEM;
-	}
-
-	srp.sp_data.obuf = kzalloc(OBUF_SIZE, GFP_KERNEL);
-	if (!srp.sp_data.obuf) {
-		srp_err("Failed to alloc OBUF for suspend/resume\n");
-		return -ENOMEM;
-	}
 #endif
-	srp_info("Allocation WBUF [%ld]Bytes\n", srp.wbuf_size);
 
 	srp.fw_info.vliw_size = sizeof(srp_fw_vliw);
 	srp.fw_info.cga_size = sizeof(srp_fw_cga);
@@ -861,7 +885,6 @@ static int srp_prepare_fw_buff(struct device *dev)
 	srp_info("VLIW_SIZE[%lu]Bytes\n", srp.fw_info.vliw_size);
 	srp_info("CGA_SIZE[%lu]Bytes\n", srp.fw_info.cga_size);
 	srp_info("DATA_SIZE[%lu]Bytes\n", srp.fw_info.data_size);
-	srp_info("Total used memory space[%ld]\n", mem_paddr);
 
 	/* Clear Firmware memory & IBUF */
 	memset(srp.fw_info.vliw, 0, VLIW_SIZE);
@@ -887,10 +910,6 @@ static int srp_remove_fw_buff(struct device *dev)
 					srp.fw_info.cga_pa);
 	dma_free_writecombine(dev, DATA_SIZE, srp.fw_info.data,
 					srp.fw_info.data_pa);
-	kfree(srp.wbuf);
-	kfree(srp.sp_data.dmem);
-	kfree(srp.sp_data.wbuf);
-	kfree(srp.sp_data.obuf);
 #endif
 	srp.fw_info.vliw = NULL;
 	srp.fw_info.cga = NULL;
@@ -1043,14 +1062,13 @@ static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 	srp_info("Suspend\n");
 
 	if (srp.is_opened) {
-		if (srp.decoding_started) {
-			memcpy(srp.sp_data.dmem, srp.dmem, DMEM_SIZE);
-			srp_ibuf_save();
-			srp_obuf_save();
+		memcpy(srp.sp_data.dmem, srp.dmem, DMEM_SIZE);
+		srp_ibuf_save();
+		srp_obuf_save();
 
-			if (srp.wait_for_eos)
-				srp.sp_data.wait_for_eos = srp.wait_for_eos;
-		}
+		if (srp.wait_for_eos)
+			srp.sp_data.wait_for_eos = srp.wait_for_eos;
+
 		srp.audss_clk_enable(false);
 	}
 
@@ -1059,14 +1077,9 @@ static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 
 static int srp_resume(struct platform_device *pdev)
 {
-	int decoding_started = 0;
-
 	srp_info("Resume\n");
 
 	if (srp.is_opened) {
-		if (srp.decoding_started)
-			decoding_started = 1;
-
 		srp.audss_clk_enable(true);
 
 		srp_set_default_fw();
@@ -1074,19 +1087,18 @@ static int srp_resume(struct platform_device *pdev)
 		srp_flush_obuf();
 		srp_reset();
 
-		if (decoding_started) {
-			if (srp.sp_data.wait_for_eos) {
-				srp.sp_data.wait_for_eos = 0;
-				srp.wait_for_eos = 1;
-				srp.prepare_for_eos = 1;
-			}
-
-			memcpy(srp.dmem, srp.sp_data.dmem, DMEM_SIZE);
-			srp_ibuf_restore();
-			srp_obuf_restore();
-			srp.decoding_started = 1;
-			srp.sp_data.resume_after_suspend = 1;
+		if (srp.sp_data.wait_for_eos) {
+			srp.sp_data.wait_for_eos = 0;
+			srp.wait_for_eos = 1;
+			srp.prepare_for_eos = 1;
 		}
+
+		memcpy(srp.dmem, srp.sp_data.dmem, DMEM_SIZE);
+		srp_ibuf_restore();
+		srp_obuf_restore();
+
+		srp.decoding_started = 1;
+		srp.sp_data.resume_after_suspend = 1;
 	}
 
 	return 0;

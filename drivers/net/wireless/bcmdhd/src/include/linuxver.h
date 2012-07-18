@@ -37,7 +37,7 @@
 #else
 #include <linux/autoconf.h>
 #endif
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 0) */
+#endif
 #include <linux/module.h>
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 3, 0))
@@ -47,7 +47,7 @@
 #else
 #define __NO_VERSION__
 #endif
-#endif /* (LINUX_VERSION_CODE < KERNEL_VERSION(2, 3, 0)) */
+#endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 5, 0)
 #define module_param(_name_, _type_, _perm_)	MODULE_PARM(_name_, "i")
@@ -101,11 +101,8 @@
 #define	MY_INIT_WORK(_work, _func)	INIT_WORK(_work, _func)
 #else
 #define	MY_INIT_WORK(_work, _func)	INIT_WORK(_work, _func, _work)
-#if !(LINUX_VERSION_CODE == KERNEL_VERSION(2, 6, 18) && defined(RHEL_MAJOR) && \
-	(RHEL_MAJOR == 5))
 typedef void (*work_func_t)(void *work);
 #endif
-#endif	
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 0))
 
@@ -582,10 +579,10 @@ do {									\
 
 #endif
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 24))
-#define DEV_PRIV(dev)	(dev->priv)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
+#define WL_DEV_IF(dev)          ((wl_if_t*)netdev_priv(dev))
 #else
-#define DEV_PRIV(dev)	netdev_priv(dev)
+#define WL_DEV_IF(dev)          ((wl_if_t*)(dev)->priv)
 #endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 20)

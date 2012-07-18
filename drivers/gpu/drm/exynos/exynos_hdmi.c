@@ -34,6 +34,7 @@
 #include <linux/regulator/consumer.h>
 
 #include <drm/exynos_drm.h>
+#include <plat/cpu.h>
 
 #include "exynos_drm_drv.h"
 #include "exynos_drm_hdmi.h"
@@ -44,42 +45,42 @@
 #define get_hdmi_context(dev)	platform_get_drvdata(to_platform_device(dev))
 
 /* HDMI Version 1.3 */
-static const u8 hdmiphy_v13_conf27[32] = {
+static const u8 hdmiphy_conf27[32] = {
 	0x01, 0x05, 0x00, 0xD8, 0x10, 0x1C, 0x30, 0x40,
 	0x6B, 0x10, 0x02, 0x51, 0xDF, 0xF2, 0x54, 0x87,
 	0x84, 0x00, 0x30, 0x38, 0x00, 0x08, 0x10, 0xE0,
 	0x22, 0x40, 0xE3, 0x26, 0x00, 0x00, 0x00, 0x00,
 };
 
-static const u8 hdmiphy_v13_conf27_027[32] = {
+static const u8 hdmiphy_conf27_027[32] = {
 	0x01, 0x05, 0x00, 0xD4, 0x10, 0x9C, 0x09, 0x64,
 	0x6B, 0x10, 0x02, 0x51, 0xDF, 0xF2, 0x54, 0x87,
 	0x84, 0x00, 0x30, 0x38, 0x00, 0x08, 0x10, 0xE0,
 	0x22, 0x40, 0xE3, 0x26, 0x00, 0x00, 0x00, 0x00,
 };
 
-static const u8 hdmiphy_v13_conf74_175[32] = {
+static const u8 hdmiphy_conf74_175[32] = {
 	0x01, 0x05, 0x00, 0xD8, 0x10, 0x9C, 0xef, 0x5B,
 	0x6D, 0x10, 0x01, 0x51, 0xef, 0xF3, 0x54, 0xb9,
 	0x84, 0x00, 0x30, 0x38, 0x00, 0x08, 0x10, 0xE0,
 	0x22, 0x40, 0xa5, 0x26, 0x01, 0x00, 0x00, 0x00,
 };
 
-static const u8 hdmiphy_v13_conf74_25[32] = {
+static const u8 hdmiphy_conf74_25[32] = {
 	0x01, 0x05, 0x00, 0xd8, 0x10, 0x9c, 0xf8, 0x40,
 	0x6a, 0x10, 0x01, 0x51, 0xff, 0xf1, 0x54, 0xba,
 	0x84, 0x00, 0x10, 0x38, 0x00, 0x08, 0x10, 0xe0,
 	0x22, 0x40, 0xa4, 0x26, 0x01, 0x00, 0x00, 0x00,
 };
 
-static const u8 hdmiphy_v13_conf148_5[32] = {
+static const u8 hdmiphy_conf148_5[32] = {
 	0x01, 0x05, 0x00, 0xD8, 0x10, 0x9C, 0xf8, 0x40,
 	0x6A, 0x18, 0x00, 0x51, 0xff, 0xF1, 0x54, 0xba,
 	0x84, 0x00, 0x10, 0x38, 0x00, 0x08, 0x10, 0xE0,
 	0x22, 0x40, 0xa4, 0x26, 0x02, 0x00, 0x00, 0x00,
 };
 
-struct hdmi_v13_tg_regs {
+struct hdmi_tg_regs {
 	u8 cmd;
 	u8 h_fsz_l;
 	u8 h_fsz_h;
@@ -111,7 +112,7 @@ struct hdmi_v13_tg_regs {
 	u8 field_bot_hdmi_h;
 };
 
-struct hdmi_v13_core_regs {
+struct hdmi_core_regs {
 	u8 h_blank[2];
 	u8 v_blank[3];
 	u8 h_v_line[3];
@@ -124,21 +125,21 @@ struct hdmi_v13_core_regs {
 	u8 v_sync_gen3[3];
 };
 
-struct hdmi_v13_preset_conf {
-	struct hdmi_v13_core_regs core;
-	struct hdmi_v13_tg_regs tg;
+struct hdmi_preset_conf {
+	struct hdmi_core_regs core;
+	struct hdmi_tg_regs tg;
 };
 
-struct hdmi_v13_conf {
+struct hdmi_conf {
 	int width;
 	int height;
 	int vrefresh;
 	bool interlace;
 	const u8 *hdmiphy_data;
-	const struct hdmi_v13_preset_conf *conf;
+	const struct hdmi_preset_conf *conf;
 };
 
-static const struct hdmi_v13_preset_conf hdmi_v13_conf_480p = {
+static const struct hdmi_preset_conf hdmi_conf_480p = {
 	.core = {
 		.h_blank = {0x8a, 0x00},
 		.v_blank = {0x0d, 0x6a, 0x01},
@@ -164,7 +165,7 @@ static const struct hdmi_v13_preset_conf hdmi_v13_conf_480p = {
 	},
 };
 
-static const struct hdmi_v13_preset_conf hdmi_v13_conf_720p60 = {
+static const struct hdmi_preset_conf hdmi_conf_720p60 = {
 	.core = {
 		.h_blank = {0x72, 0x01},
 		.v_blank = {0xee, 0xf2, 0x00},
@@ -192,7 +193,7 @@ static const struct hdmi_v13_preset_conf hdmi_v13_conf_720p60 = {
 	},
 };
 
-static const struct hdmi_v13_preset_conf hdmi_v13_conf_1080i50 = {
+static const struct hdmi_preset_conf hdmi_conf_1080i50 = {
 	.core = {
 		.h_blank = {0xd0, 0x02},
 		.v_blank = {0x32, 0xB2, 0x00},
@@ -220,7 +221,7 @@ static const struct hdmi_v13_preset_conf hdmi_v13_conf_1080i50 = {
 	},
 };
 
-static const struct hdmi_v13_preset_conf hdmi_v13_conf_1080p50 = {
+static const struct hdmi_preset_conf hdmi_conf_1080p50 = {
 	.core = {
 		.h_blank = {0xd0, 0x02},
 		.v_blank = {0x65, 0x6c, 0x01},
@@ -248,7 +249,7 @@ static const struct hdmi_v13_preset_conf hdmi_v13_conf_1080p50 = {
 	},
 };
 
-static const struct hdmi_v13_preset_conf hdmi_v13_conf_1080i60 = {
+static const struct hdmi_preset_conf hdmi_conf_1080i60 = {
 	.core = {
 		.h_blank = {0x18, 0x01},
 		.v_blank = {0x32, 0xB2, 0x00},
@@ -276,7 +277,7 @@ static const struct hdmi_v13_preset_conf hdmi_v13_conf_1080i60 = {
 	},
 };
 
-static const struct hdmi_v13_preset_conf hdmi_v13_conf_1080p60 = {
+static const struct hdmi_preset_conf hdmi_conf_1080p60 = {
 	.core = {
 		.h_blank = {0x18, 0x01},
 		.v_blank = {0x65, 0x6c, 0x01},
@@ -304,41 +305,39 @@ static const struct hdmi_v13_preset_conf hdmi_v13_conf_1080p60 = {
 	},
 };
 
-static const struct hdmi_v13_conf hdmi_v13_confs[] = {
-	{ 1280, 720, 60, false, hdmiphy_v13_conf74_25, &hdmi_v13_conf_720p60 },
-	{ 1280, 720, 50, false, hdmiphy_v13_conf74_25, &hdmi_v13_conf_720p60 },
-	{ 720, 480, 60, false, hdmiphy_v13_conf27_027, &hdmi_v13_conf_480p },
-	{ 1920, 1080, 50, true, hdmiphy_v13_conf74_25, &hdmi_v13_conf_1080i50 },
-	{ 1920, 1080, 50, false, hdmiphy_v13_conf148_5,
-				 &hdmi_v13_conf_1080p50 },
-	{ 1920, 1080, 60, true, hdmiphy_v13_conf74_25, &hdmi_v13_conf_1080i60 },
-	{ 1920, 1080, 60, false, hdmiphy_v13_conf148_5,
-				 &hdmi_v13_conf_1080p60 },
+static const struct hdmi_conf hdmi_confs[] = {
+	{ 1280, 720, 60, false, hdmiphy_conf74_25, &hdmi_conf_720p60 },
+	{ 1280, 720, 50, false, hdmiphy_conf74_25, &hdmi_conf_720p60 },
+	{ 720, 480, 60, false, hdmiphy_conf27_027, &hdmi_conf_480p },
+	{ 1920, 1080, 50, true, hdmiphy_conf74_25, &hdmi_conf_1080i50 },
+	{ 1920, 1080, 50, false, hdmiphy_conf148_5, &hdmi_conf_1080p50 },
+	{ 1920, 1080, 60, true, hdmiphy_conf74_25, &hdmi_conf_1080i60 },
+	{ 1920, 1080, 60, false, hdmiphy_conf148_5, &hdmi_conf_1080p60 },
 };
 
 /* HDMI Version 1.4 */
-static const u8 hdmiphy_conf27_027[32] = {
+static const u8 exynos_hdmiphy_v14_conf27_027[32] = {
 	0x01, 0xd1, 0x2d, 0x72, 0x40, 0x64, 0x12, 0x08,
 	0x43, 0xa0, 0x0e, 0xd9, 0x45, 0xa0, 0xac, 0x80,
 	0x08, 0x80, 0x11, 0x04, 0x02, 0x22, 0x44, 0x86,
 	0x54, 0xe3, 0x24, 0x00, 0x00, 0x00, 0x01, 0x00,
 };
 
-static const u8 hdmiphy_conf74_25[32] = {
+static const u8 exynos_hdmiphy_v14_conf74_25[32] = {
 	0x01, 0xd1, 0x1f, 0x10, 0x40, 0x40, 0xf8, 0x08,
 	0x81, 0xa0, 0xba, 0xd8, 0x45, 0xa0, 0xac, 0x80,
 	0x3c, 0x80, 0x11, 0x04, 0x02, 0x22, 0x44, 0x86,
 	0x54, 0xa5, 0x24, 0x01, 0x00, 0x00, 0x01, 0x00,
 };
 
-static const u8 hdmiphy_conf148_5[32] = {
+static const u8 exynos_hdmiphy_v14_conf148_5[32] = {
 	0x01, 0xd1, 0x1f, 0x00, 0x40, 0x40, 0xf8, 0x08,
 	0x81, 0xa0, 0xba, 0xd8, 0x45, 0xa0, 0xac, 0x80,
 	0x3c, 0x80, 0x11, 0x04, 0x02, 0x22, 0x44, 0x86,
 	0x54, 0x4b, 0x25, 0x03, 0x00, 0x00, 0x01, 0x00,
 };
 
-struct hdmi_tg_regs {
+struct exynos_hdmi_v14_tg_regs {
 	u8 cmd;
 	u8 h_fsz_l;
 	u8 h_fsz_h;
@@ -375,7 +374,7 @@ struct hdmi_tg_regs {
 	u8 tg_3d;
 };
 
-struct hdmi_core_regs {
+struct exynos_hdmi_v14_core_regs {
 	u8 h_blank[2];
 	u8 v2_blank[2];
 	u8 v1_blank[2];
@@ -414,21 +413,21 @@ struct hdmi_core_regs {
 	u8 vact_space_6[2];
 };
 
-struct hdmi_preset_conf {
-	struct hdmi_core_regs core;
-	struct hdmi_tg_regs tg;
+struct exynos_hdmi_v14_preset_conf {
+	struct exynos_hdmi_v14_core_regs core;
+	struct exynos_hdmi_v14_tg_regs tg;
 };
 
-struct hdmi_conf {
+struct exynos_hdmi_v14_conf {
 	int width;
 	int height;
 	int vrefresh;
 	bool interlace;
 	const u8 *hdmiphy_data;
-	const struct hdmi_preset_conf *conf;
+	const struct exynos_hdmi_v14_preset_conf *conf;
 };
 
-static const struct hdmi_preset_conf hdmi_conf_480p60 = {
+static const struct exynos_hdmi_v14_preset_conf exynos_hdmi_v14_conf_480p60 = {
 	.core = {
 		.h_blank = {0x8a, 0x00},
 		.v2_blank = {0x0d, 0x02},
@@ -485,7 +484,7 @@ static const struct hdmi_preset_conf hdmi_conf_480p60 = {
 	},
 };
 
-static const struct hdmi_preset_conf hdmi_conf_720p50 = {
+static const struct exynos_hdmi_v14_preset_conf exynos_hdmi_v14_conf_720p50 = {
 	.core = {
 		.h_blank = {0xbc, 0x02},
 		.v2_blank = {0xee, 0x02},
@@ -542,12 +541,12 @@ static const struct hdmi_preset_conf hdmi_conf_720p50 = {
 	},
 };
 
-static const struct hdmi_preset_conf hdmi_conf_720p60 = {
+static const struct exynos_hdmi_v14_preset_conf exynos_hdmi_v14_conf_720p60 = {
 	.core = {
 		.h_blank = {0x72, 0x01},
-		.v2_blank = {0xee, 0x02},
+		.v2_blank = {0xdc, 0x05},
 		.v1_blank = {0x1e, 0x00},
-		.v_line = {0xee, 0x02},
+		.v_line = {0xdc, 0x05},
 		.h_line = {0x72, 0x06},
 		.hsync_pol = {0x00},
 		.vsync_pol = {0x00},
@@ -574,8 +573,8 @@ static const struct hdmi_preset_conf hdmi_conf_720p60 = {
 		.v_sync_line_aft_pxl_4 = {0xff, 0xff},
 		.v_sync_line_aft_pxl_5 = {0xff, 0xff},
 		.v_sync_line_aft_pxl_6 = {0xff, 0xff},
-		.vact_space_1 = {0xff, 0xff},
-		.vact_space_2 = {0xff, 0xff},
+		.vact_space_1 = {0xee, 0x02},
+		.vact_space_2 = {0x0c, 0x03},
 		.vact_space_3 = {0xff, 0xff},
 		.vact_space_4 = {0xff, 0xff},
 		.vact_space_5 = {0xff, 0xff},
@@ -586,20 +585,20 @@ static const struct hdmi_preset_conf hdmi_conf_720p60 = {
 		0x00, /* cmd */
 		0x72, 0x06, /* h_fsz */
 		0x72, 0x01, 0x00, 0x05, /* hact */
-		0xee, 0x02, /* v_fsz */
+		0xdc, 0x05, /* v_fsz */
 		0x01, 0x00, 0x33, 0x02, /* vsync */
-		0x1e, 0x00, 0xd0, 0x02, /* vact */
+		0x1e, 0x00, 0x00, 0x2d, /* vact */
 		0x33, 0x02, /* field_chg */
-		0x48, 0x02, /* vact_st2 */
+		0x0c, 0x03, /* vact_st2 */
 		0x00, 0x00, /* vact_st3 */
 		0x00, 0x00, /* vact_st4 */
 		0x01, 0x00, 0x01, 0x00, /* vsync top/bot */
 		0x01, 0x00, 0x33, 0x02, /* field top/bot */
-		0x00, /* 3d FP */
+		0x01, /* 3d FP */
 	},
 };
 
-static const struct hdmi_preset_conf hdmi_conf_1080i50 = {
+static const struct exynos_hdmi_v14_preset_conf exynos_hdmi_v14_conf_1080i50 = {
 	.core = {
 		.h_blank = {0xd0, 0x02},
 		.v2_blank = {0x32, 0x02},
@@ -656,7 +655,7 @@ static const struct hdmi_preset_conf hdmi_conf_1080i50 = {
 	},
 };
 
-static const struct hdmi_preset_conf hdmi_conf_1080i60 = {
+static const struct exynos_hdmi_v14_preset_conf exynos_hdmi_v14_conf_1080i60 = {
 	.core = {
 		.h_blank = {0x18, 0x01},
 		.v2_blank = {0x32, 0x02},
@@ -713,7 +712,7 @@ static const struct hdmi_preset_conf hdmi_conf_1080i60 = {
 	},
 };
 
-static const struct hdmi_preset_conf hdmi_conf_1080p50 = {
+static const struct exynos_hdmi_v14_preset_conf exynos_hdmi_v14_conf_1080p50 = {
 	.core = {
 		.h_blank = {0xd0, 0x02},
 		.v2_blank = {0x65, 0x04},
@@ -770,7 +769,7 @@ static const struct hdmi_preset_conf hdmi_conf_1080p50 = {
 	},
 };
 
-static const struct hdmi_preset_conf hdmi_conf_1080p60 = {
+static const struct exynos_hdmi_v14_preset_conf exynos_hdmi_v14_conf_1080p60 = {
 	.core = {
 		.h_blank = {0x18, 0x01},
 		.v2_blank = {0x65, 0x04},
@@ -821,14 +820,21 @@ static const struct hdmi_preset_conf hdmi_conf_1080p60 = {
 	},
 };
 
-static const struct hdmi_conf hdmi_confs[] = {
-	{ 720, 480, 60, false, hdmiphy_conf27_027, &hdmi_conf_480p60 },
-	{ 1280, 720, 50, false, hdmiphy_conf74_25, &hdmi_conf_720p50 },
-	{ 1280, 720, 60, false, hdmiphy_conf74_25, &hdmi_conf_720p60 },
-	{ 1920, 1080, 50, true, hdmiphy_conf74_25, &hdmi_conf_1080i50 },
-	{ 1920, 1080, 60, true, hdmiphy_conf74_25, &hdmi_conf_1080i60 },
-	{ 1920, 1080, 50, false, hdmiphy_conf148_5, &hdmi_conf_1080p50 },
-	{ 1920, 1080, 60, false, hdmiphy_conf148_5, &hdmi_conf_1080p60 },
+static const struct exynos_hdmi_v14_conf exynos_hdmi_v14_confs[] = {
+	{ 720, 480, 60, false, exynos_hdmiphy_v14_conf27_027,
+		&exynos_hdmi_v14_conf_480p60 },
+	{ 1280, 720, 50, false, exynos_hdmiphy_v14_conf74_25,
+		&exynos_hdmi_v14_conf_720p50 },
+	{ 1280, 720, 60, false, exynos_hdmiphy_v14_conf74_25,
+		&exynos_hdmi_v14_conf_720p60 },
+	{ 1920, 1080, 50, true, exynos_hdmiphy_v14_conf74_25,
+		&exynos_hdmi_v14_conf_1080i50 },
+	{ 1920, 1080, 60, true, exynos_hdmiphy_v14_conf74_25,
+		&exynos_hdmi_v14_conf_1080i60 },
+	{ 1920, 1080, 50, false, exynos_hdmiphy_v14_conf148_5,
+		&exynos_hdmi_v14_conf_1080p50 },
+	{ 1920, 1080, 60, false, exynos_hdmiphy_v14_conf148_5,
+		&exynos_hdmi_v14_conf_1080p60 },
 };
 
 
@@ -851,7 +857,7 @@ static inline void hdmi_reg_writemask(struct hdmi_context *hdata,
 	writel(value, hdata->regs + reg_id);
 }
 
-static void hdmi_v13_regs_dump(struct hdmi_context *hdata, char *prefix)
+static void exynos_hdmi_v13_regs_dump(struct hdmi_context *hdata, char *prefix)
 {
 #define DUMPREG(reg_id) \
 	DRM_DEBUG_KMS("%s:" #reg_id " = %08x\n", prefix, \
@@ -938,13 +944,13 @@ static void hdmi_v13_regs_dump(struct hdmi_context *hdata, char *prefix)
 #undef DUMPREG
 }
 
-static void hdmi_v14_regs_dump(struct hdmi_context *hdata, char *prefix)
+static void exynos_hdmi_v14_regs_dump(struct hdmi_context *hdata, char *prefix)
 {
-	int i;
-
 #define DUMPREG(reg_id) \
 	DRM_DEBUG_KMS("%s:" #reg_id " = %08x\n", prefix, \
 	readl(hdata->regs + reg_id))
+
+	int i;
 
 	DRM_DEBUG_KMS("%s: ---- CONTROL REGISTERS ----\n", prefix);
 	DUMPREG(HDMI_INTC_CON);
@@ -1107,29 +1113,13 @@ static void hdmi_v14_regs_dump(struct hdmi_context *hdata, char *prefix)
 
 static void hdmi_regs_dump(struct hdmi_context *hdata, char *prefix)
 {
-	if (hdata->is_v13)
-		hdmi_v13_regs_dump(hdata, prefix);
+	if (soc_is_exynos4210())
+		exynos_hdmi_v13_regs_dump(hdata, prefix);
 	else
-		hdmi_v14_regs_dump(hdata, prefix);
+		exynos_hdmi_v14_regs_dump(hdata, prefix);
 }
 
-static int hdmi_v13_conf_index(struct drm_display_mode *mode)
-{
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(hdmi_v13_confs); ++i)
-		if (hdmi_v13_confs[i].width == mode->hdisplay &&
-				hdmi_v13_confs[i].height == mode->vdisplay &&
-				hdmi_v13_confs[i].vrefresh == mode->vrefresh &&
-				hdmi_v13_confs[i].interlace ==
-				((mode->flags & DRM_MODE_FLAG_INTERLACE) ?
-				 true : false))
-			return i;
-
-	return -1;
-}
-
-static int hdmi_v14_conf_index(struct drm_display_mode *mode)
+static int exynos_hdmi_v13_conf_index(struct drm_display_mode *mode)
 {
 	int i;
 
@@ -1145,13 +1135,28 @@ static int hdmi_v14_conf_index(struct drm_display_mode *mode)
 	return -1;
 }
 
-static int hdmi_conf_index(struct hdmi_context *hdata,
-			   struct drm_display_mode *mode)
+static int exynos_hdmi_v14_conf_index(struct drm_display_mode *mode)
 {
-	if (hdata->is_v13)
-		return hdmi_v13_conf_index(mode);
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(hdmi_confs); ++i)
+		if (exynos_hdmi_v14_confs[i].width == mode->hdisplay &&
+			exynos_hdmi_v14_confs[i].height == mode->vdisplay &&
+			exynos_hdmi_v14_confs[i].vrefresh == mode->vrefresh &&
+			exynos_hdmi_v14_confs[i].interlace ==
+			((mode->flags & DRM_MODE_FLAG_INTERLACE) ?
+				 true : false))
+			return i;
+
+	return -1;
+}
+
+static int hdmi_conf_index(struct drm_display_mode *mode)
+{
+	if (soc_is_exynos4210())
+		return exynos_hdmi_v13_conf_index(mode);
 	else
-		return hdmi_v14_conf_index(mode);
+		return exynos_hdmi_v14_conf_index(mode);
 }
 
 static bool hdmi_is_connected(void *ctx)
@@ -1189,25 +1194,16 @@ static int hdmi_get_edid(void *ctx, struct drm_connector *connector,
 	return 0;
 }
 
-static int hdmi_v13_check_timing(struct fb_videomode *check_timing)
+static int exynos_hdmi_v13_check_timing(void *ctx, void *timing)
 {
+	struct fb_videomode *check_timing = timing;
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(hdmi_v13_confs); ++i)
-		if (hdmi_v13_confs[i].width == check_timing->xres &&
-			hdmi_v13_confs[i].height == check_timing->yres &&
-			hdmi_v13_confs[i].vrefresh == check_timing->refresh &&
-			hdmi_v13_confs[i].interlace ==
-			((check_timing->vmode & FB_VMODE_INTERLACED) ?
-			 true : false))
-			return 0;
+	DRM_DEBUG_KMS("[%d] %s\n", __LINE__, __func__);
 
-	return -EINVAL;
-}
-
-static int hdmi_v14_check_timing(struct fb_videomode *check_timing)
-{
-	int i;
+	DRM_DEBUG_KMS("[%d]x[%d] [%d]Hz [%x]\n", check_timing->xres,
+			check_timing->yres, check_timing->refresh,
+			check_timing->vmode);
 
 	for (i = 0; i < ARRAY_SIZE(hdmi_confs); ++i)
 		if (hdmi_confs[i].width == check_timing->xres &&
@@ -1221,10 +1217,10 @@ static int hdmi_v14_check_timing(struct fb_videomode *check_timing)
 	return -EINVAL;
 }
 
-static int hdmi_check_timing(void *ctx, void *timing)
+static int exynos_hdmi_v14_check_timing(void *ctx, void *timing)
 {
-	struct hdmi_context *hdata = (struct hdmi_context *)ctx;
 	struct fb_videomode *check_timing = timing;
+	int i;
 
 	DRM_DEBUG_KMS("[%d] %s\n", __LINE__, __func__);
 
@@ -1232,10 +1228,25 @@ static int hdmi_check_timing(void *ctx, void *timing)
 			check_timing->yres, check_timing->refresh,
 			check_timing->vmode);
 
-	if (hdata->is_v13)
-		return hdmi_v13_check_timing(check_timing);
+	for (i = 0; i < ARRAY_SIZE(hdmi_confs); ++i)
+		if (exynos_hdmi_v14_confs[i].width == check_timing->xres &&
+			exynos_hdmi_v14_confs[i].height == check_timing->yres &&
+			exynos_hdmi_v14_confs[i].vrefresh ==
+			check_timing->refresh &&
+			exynos_hdmi_v14_confs[i].interlace ==
+			((check_timing->vmode & FB_VMODE_INTERLACED) ?
+			 true : false))
+			return 0;
+
+	return -EINVAL;
+}
+
+static int hdmi_check_timing(void *ctx, void *timing)
+{
+	if (soc_is_exynos4210())
+		return exynos_hdmi_v13_check_timing(ctx, timing);
 	else
-		return hdmi_v14_check_timing(check_timing);
+		return exynos_hdmi_v14_check_timing(ctx, timing);
 }
 
 static int hdmi_display_power_on(void *ctx, int mode)
@@ -1274,7 +1285,7 @@ static void hdmi_conf_reset(struct hdmi_context *hdata)
 	/* disable hpd handle for drm */
 	hdata->hpd_handle = false;
 
-	if (hdata->is_v13)
+	if (soc_is_exynos4210())
 		reg = HDMI_V13_CORE_RSTOUT;
 	else
 		reg = HDMI_CORE_RSTOUT;
@@ -1307,7 +1318,7 @@ static void hdmi_conf_init(struct hdmi_context *hdata)
 	/* disable bluescreen */
 	hdmi_reg_writemask(hdata, HDMI_CON_0, 0, HDMI_BLUE_SCR_EN);
 
-	if (hdata->is_v13) {
+	if (soc_is_exynos4210()) {
 		/* choose bluescreen (fecal) color */
 		hdmi_reg_writeb(hdata, HDMI_V13_BLUE_SCREEN_0, 0x12);
 		hdmi_reg_writeb(hdata, HDMI_V13_BLUE_SCREEN_1, 0x34);
@@ -1333,12 +1344,11 @@ static void hdmi_conf_init(struct hdmi_context *hdata)
 	hdata->hpd_handle = true;
 }
 
-static void hdmi_v13_timing_apply(struct hdmi_context *hdata)
+static void exynos_hdmi_v13_timing_apply(struct hdmi_context *hdata)
 {
-	const struct hdmi_v13_preset_conf *conf =
-		hdmi_v13_confs[hdata->cur_conf].conf;
-	const struct hdmi_v13_core_regs *core = &conf->core;
-	const struct hdmi_v13_tg_regs *tg = &conf->tg;
+	const struct hdmi_preset_conf *conf = hdmi_confs[hdata->cur_conf].conf;
+	const struct hdmi_core_regs *core = &conf->core;
+	const struct hdmi_tg_regs *tg = &conf->tg;
 	int tries;
 
 	/* setting core registers */
@@ -1423,11 +1433,12 @@ static void hdmi_v13_timing_apply(struct hdmi_context *hdata)
 		hdmi_reg_writemask(hdata, HDMI_TG_CMD, ~0, HDMI_TG_EN);
 }
 
-static void hdmi_v14_timing_apply(struct hdmi_context *hdata)
+static void exynos_hdmi_v14_timing_apply(struct hdmi_context *hdata)
 {
-	const struct hdmi_preset_conf *conf = hdmi_confs[hdata->cur_conf].conf;
-	const struct hdmi_core_regs *core = &conf->core;
-	const struct hdmi_tg_regs *tg = &conf->tg;
+	const struct exynos_hdmi_v14_preset_conf *conf =
+		exynos_hdmi_v14_confs[hdata->cur_conf].conf;
+	const struct exynos_hdmi_v14_core_regs *core = &conf->core;
+	const struct exynos_hdmi_v14_tg_regs *tg = &conf->tg;
 	int tries;
 
 	/* setting core registers */
@@ -1592,10 +1603,10 @@ static void hdmi_v14_timing_apply(struct hdmi_context *hdata)
 
 static void hdmi_timing_apply(struct hdmi_context *hdata)
 {
-	if (hdata->is_v13)
-		hdmi_v13_timing_apply(hdata);
+	if (soc_is_exynos4210())
+		exynos_hdmi_v13_timing_apply(hdata);
 	else
-		hdmi_v14_timing_apply(hdata);
+		exynos_hdmi_v14_timing_apply(hdata);
 }
 
 static void hdmiphy_conf_reset(struct hdmi_context *hdata)
@@ -1614,7 +1625,7 @@ static void hdmiphy_conf_reset(struct hdmi_context *hdata)
 	if (hdata->hdmiphy_port)
 		i2c_master_send(hdata->hdmiphy_port, buffer, 2);
 
-	if (hdata->is_v13)
+	if (soc_is_exynos4210())
 		reg = HDMI_V13_PHY_RSTOUT;
 	else
 		reg = HDMI_PHY_RSTOUT;
@@ -1641,10 +1652,11 @@ static void hdmiphy_conf_apply(struct hdmi_context *hdata)
 	}
 
 	/* pixel clock */
-	if (hdata->is_v13)
-		hdmiphy_data = hdmi_v13_confs[hdata->cur_conf].hdmiphy_data;
-	else
+	if (soc_is_exynos4210())
 		hdmiphy_data = hdmi_confs[hdata->cur_conf].hdmiphy_data;
+	else
+		hdmiphy_data =
+			exynos_hdmi_v14_confs[hdata->cur_conf].hdmiphy_data;
 
 	memcpy(buffer, hdmiphy_data, 32);
 	ret = i2c_master_send(hdata->hdmiphy_port, buffer, 32);
@@ -1699,8 +1711,8 @@ static void hdmi_mode_set(void *ctx, void *mode)
 
 	DRM_DEBUG_KMS("[%d] %s\n", __LINE__, __func__);
 
-	conf_idx = hdmi_conf_index(hdata, mode);
-	if (conf_idx >= 0)
+	conf_idx = hdmi_conf_index(mode);
+	if (conf_idx >= 0 && conf_idx < ARRAY_SIZE(hdmi_confs))
 		hdata->cur_conf = conf_idx;
 	else
 		DRM_DEBUG_KMS("not supported mode\n");
@@ -1974,7 +1986,6 @@ static int __devinit hdmi_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, drm_hdmi_ctx);
 
-	hdata->is_v13 = pdata->is_v13;
 	hdata->default_win = pdata->default_win;
 	hdata->default_timing = &pdata->timing;
 	hdata->default_bpp = pdata->bpp;

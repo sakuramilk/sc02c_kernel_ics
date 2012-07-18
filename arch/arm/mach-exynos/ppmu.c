@@ -165,7 +165,6 @@ struct exynos4_ppmu_hw exynos_ppmu[] = {
 		.event[3] = RDWR_DATA_COUNT,
 		.weight = DEFAULT_WEIGHT,
 	},
-#ifdef CONFIG_ARCH_EXYNOS5
 	[PPMU_DDR_C] = {
 		.id = PPMU_DDR_C,
 		.hw_base = S5P_VA_PPMU_DDR_C,
@@ -184,11 +183,4 @@ struct exynos4_ppmu_hw exynos_ppmu[] = {
 		.event[3] = RDWR_DATA_COUNT,
 		.weight = DEFAULT_WEIGHT,
 	},
-	[PPMU_RIGHT0_BUS] = {
-		.id = PPMU_RIGHT0_BUS,
-		.hw_base = S5P_VA_PPMU_RIGHT0_BUS,
-		.event[3] = RDWR_DATA_COUNT,
-		.weight = DEFAULT_WEIGHT,
-	},
-#endif
 };

@@ -196,6 +196,7 @@ struct srp_info {
 
 	/* SRP status information */
 	unsigned int	decoding_started;
+	unsigned int	first_decoding;
 	unsigned int	is_opened;
 	unsigned int	is_running;
 	unsigned int	is_pending;

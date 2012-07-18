@@ -161,9 +161,6 @@ struct s3cfb_global {
 	void __iomem		*regs_org;
 	struct mutex		lock;
 	struct device		*dev;
-#ifdef CONFIG_BUSFREQ_OPP
-	struct device           *bus_dev;
-#endif
 	struct clk		*clock;
 	int			irq;
 	wait_queue_head_t	wq;

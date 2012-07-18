@@ -349,8 +349,7 @@ struct vb2_ion_conf {
 };
 
 struct vb2_ion_buf {
-	struct vm_area_struct		**vma;
-	int				vma_count;
+	struct vm_area_struct		*vma;
 	struct vb2_ion_conf		*conf;
 	struct vb2_vmarea_handler	handler;
 
@@ -358,6 +357,7 @@ struct vb2_ion_buf {
 
 	dma_addr_t			kva;
 	dma_addr_t			dva;
+	size_t				offset;
 	unsigned long			size;
 
 	struct scatterlist		*sg;

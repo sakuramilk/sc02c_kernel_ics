@@ -32,7 +32,7 @@
 #include <linux/module.h>
 #include "drm.h"
 
-#define MAX_CRTC	3
+#define MAX_CRTC	2
 #define MAX_PLANE	5
 #define MAX_FB_BUFFER	4
 #define DEFAULT_ZPOS	-1
@@ -50,8 +50,6 @@ enum exynos_drm_output_type {
 	EXYNOS_DISPLAY_TYPE_LCD,
 	/* HDMI Interface. */
 	EXYNOS_DISPLAY_TYPE_HDMI,
-	/* Virtual Display Interface. */
-	EXYNOS_DISPLAY_TYPE_VIDI,
 };
 
 /*
@@ -139,7 +137,7 @@ struct exynos_drm_overlay {
  * @type: one of EXYNOS_DISPLAY_TYPE_LCD and HDMI.
  * @is_connected: check for that display is connected or not.
  * @get_edid: get edid modes from display driver.
- * @get_panel: get panel object from display driver.
+ * @get_timing: get timing object from display driver.
  * @check_timing: check if timing is valid or not.
  * @power_on: display device on or off.
  */
@@ -148,7 +146,7 @@ struct exynos_drm_display_ops {
 	bool (*is_connected)(struct device *dev);
 	int (*get_edid)(struct device *dev, struct drm_connector *connector,
 				u8 *edid, int len);
-	void *(*get_panel)(struct device *dev);
+	void *(*get_timing)(struct device *dev);
 	int (*check_timing)(struct device *dev, void *timing);
 	int (*power_on)(struct device *dev, int mode);
 };

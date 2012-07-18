@@ -134,10 +134,9 @@
 #define	DMEMS_CORE_ID		0x835		/* SDR/DDR1 memory controller core */
 #define	DEF_SHIM_COMP		0x837		/* SHIM component in ubus/6362 */
 
-#define ACPHY_CORE_ID		0x83b		/* Dot11 ACPHY */
-#define PCIE2_CORE_ID		0x83c		/* pci express Gen2 core */
+#define	PCIE2_CORE_ID		0x83c		/* pci express core */
 #define	USB30D_CORE_ID		0x83d		/* usb 3.0 device core */
-#define ARMCR4_CORE_ID		0x83e		/* ARM CR4 CPU */
+#define	ARMCR4_CORE_ID		0x83e		/* ARM Cortex M3 core */
 #define	APB_BRIDGE_CORE_ID	0x135		/* APB bridge core ID */
 #define	AXI_CORE_ID		0x301		/* AXI/GPV core ID */
 #define	EROM_CORE_ID		0x366		/* EROM core ID */

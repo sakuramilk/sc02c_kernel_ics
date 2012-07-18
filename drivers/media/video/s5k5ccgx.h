@@ -32,6 +32,7 @@
  ************************************/
 #define FEATURE_YUV_CAPTURE
 /* #define CONFIG_LOAD_FILE */ /* for tuning */
+#define NEW_CAM_DRV
 
 /** Debuging Feature **/
 #define CONFIG_CAM_DEBUG
@@ -479,7 +480,6 @@ struct s5k5ccgx_state {
 	struct mutex ctrl_lock;
 	struct mutex af_lock;
 	struct work_struct af_work;
-	struct work_struct af_win_work;
 	struct workqueue_struct *workqueue;
 	enum s5k5ccgx_runmode runmode;
 	enum v4l2_sensor_mode sensor_mode;

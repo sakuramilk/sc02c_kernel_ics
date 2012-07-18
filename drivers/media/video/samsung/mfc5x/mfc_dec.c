@@ -31,7 +31,8 @@
 #include "mfc_mem.h"
 #include "mfc_buf.h"
 
-#undef DUMP_STREAM
+/*#undef DUMP_STREAM*/
+/*#define DUMP_STREAM*/
 
 #ifdef DUMP_STREAM
 #include <linux/syscalls.h>

@@ -164,8 +164,6 @@ static int max77686_i2c_probe(struct i2c_client *i2c,
 	if (ret < 0)
 		goto err_mfd;
 
-	device_init_wakeup(max77686->dev, pdata->wakeup);
-
 	return ret;
 
 err_mfd:
@@ -203,10 +201,10 @@ static int max77686_suspend(struct device *dev)
 	struct i2c_client *i2c = container_of(dev, struct i2c_client, dev);
 	struct max77686_dev *max77686 = i2c_get_clientdata(i2c);
 
-	disable_irq(max77686->irq);
-
-	if (device_may_wakeup(dev))
+	if (max77686->wakeup)
 		enable_irq_wake(max77686->irq);
+
+	disable_irq(max77686->irq);
 
 	return 0;
 }
@@ -216,12 +214,12 @@ static int max77686_resume(struct device *dev)
 	struct i2c_client *i2c = container_of(dev, struct i2c_client, dev);
 	struct max77686_dev *max77686 = i2c_get_clientdata(i2c);
 
-	if (device_may_wakeup(dev))
+	if (max77686->wakeup)
 		disable_irq_wake(max77686->irq);
 
 	enable_irq(max77686->irq);
 
-	return max77686_irq_resume(max77686);
+	return 0;
 }
 #else
 #define max77686_suspend	NULL

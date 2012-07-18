@@ -80,6 +80,7 @@ static void jpeg_watchdog_worker(struct work_struct *work)
 	printk(KERN_DEBUG "jpeg_watchdog_worker\n");
 	dev = container_of(work, struct jpeg_dev, watchdog_work);
 
+	spin_lock_irqsave(&ctx->slock, flags);
 	clear_bit(0, &dev->hw_run);
 	if (dev->mode == ENCODING)
 		ctx = v4l2_m2m_get_curr_priv(dev->m2m_dev_enc);
@@ -87,7 +88,6 @@ static void jpeg_watchdog_worker(struct work_struct *work)
 		ctx = v4l2_m2m_get_curr_priv(dev->m2m_dev_dec);
 
 	if (ctx) {
-		spin_lock_irqsave(&ctx->slock, flags);
 		src_vb = v4l2_m2m_src_buf_remove(ctx->m2m_ctx);
 		dst_vb = v4l2_m2m_dst_buf_remove(ctx->m2m_ctx);
 
@@ -97,10 +97,11 @@ static void jpeg_watchdog_worker(struct work_struct *work)
 			v4l2_m2m_job_finish(dev->m2m_dev_enc, ctx->m2m_ctx);
 		else
 			v4l2_m2m_job_finish(dev->m2m_dev_dec, ctx->m2m_ctx);
-		spin_unlock_irqrestore(&ctx->slock, flags);
 	} else {
 		printk(KERN_ERR "watchdog_ctx is NULL\n");
 	}
+
+	spin_unlock_irqrestore(&ctx->slock, flags);
 }
 
 static int jpeg_dec_queue_setup(struct vb2_queue *vq, unsigned int *num_buffers,
@@ -399,15 +400,7 @@ static int jpeg_m2m_open(struct file *file)
 	clk_enable(dev->clk);
 
 #ifdef CONFIG_PM_RUNTIME
-#if defined (CONFIG_CPU_EXYNOS5250)
-	dev->vb2->resume(dev->alloc_ctx);
-#if defined(CONFIG_BUSFREQ_OPP) || defined(CONFIG_BUSFREQ_LOCK_WRAPPER)
-	/* lock bus frequency */
-	dev_lock(dev->bus_dev, &dev->plat_dev->dev, BUSFREQ_400MHZ);
-#endif
-#else
 	pm_runtime_get_sync(&dev->plat_dev->dev);
-#endif
 #endif
 
 	return 0;
@@ -428,17 +421,12 @@ static int jpeg_m2m_release(struct file *file)
 
 	v4l2_m2m_ctx_release(ctx->m2m_ctx);
 	spin_unlock_irqrestore(&ctx->dev->slock, flags);
-
-#ifdef CONFIG_PM_RUNTIME
-#if defined (CONFIG_CPU_EXYNOS5250)
-	ctx->dev->vb2->suspend(ctx->dev->alloc_ctx);
-#if defined(CONFIG_BUSFREQ_OPP) || defined(CONFIG_BUSFREQ_LOCK_WRAPPER)
+#ifdef CONFIG_BUSFREQ_OPP
 	/* Unlock bus frequency */
 	dev_unlock(ctx->dev->bus_dev, &ctx->dev->plat_dev->dev);
 #endif
-#else
+#ifdef CONFIG_PM_RUNTIME
 	pm_runtime_put_sync(&ctx->dev->plat_dev->dev);
-#endif
 #endif
 	clk_disable(ctx->dev->clk);
 	kfree(ctx);
@@ -781,9 +769,7 @@ static int jpeg_probe(struct platform_device *pdev)
 	}
 
 #ifdef CONFIG_PM_RUNTIME
-#ifndef CONFIG_CPU_EXYNOS5250
 	pm_runtime_enable(&pdev->dev);
-#endif
 #endif
 
 	/* clock enable */
@@ -869,7 +855,7 @@ static int jpeg_probe(struct platform_device *pdev)
 		goto err_video_reg;
 	}
 
-#if defined(CONFIG_BUSFREQ_OPP) || defined(CONFIG_BUSFREQ_LOCK_WRAPPER)
+#ifdef CONFIG_BUSFREQ_OPP
 	/* To lock bus frequency in OPP mode */
 	dev->bus_dev = dev_get("exynos-busfreq");
 #endif
@@ -941,15 +927,8 @@ static int jpeg_remove(struct platform_device *pdev)
 
 	clk_put(dev->clk);
 #ifdef CONFIG_PM_RUNTIME
-#if defined (CONFIG_CPU_EXYNOS5250)
-#if defined(CONFIG_BUSFREQ_OPP) || defined(CONFIG_BUSFREQ_LOCK_WRAPPER)
-	/* lock bus frequency */
-	dev_unlock(dev->bus_dev, &pdev->dev);
-#endif
-#else
 	pm_runtime_put_sync(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
-#endif
 #endif
 	kfree(dev);
 	return 0;
@@ -957,38 +936,32 @@ static int jpeg_remove(struct platform_device *pdev)
 
 static int jpeg_suspend(struct platform_device *pdev, pm_message_t state)
 {
-#ifdef CONFIG_PM_RUNTIME
-#if defined (CONFIG_CPU_EXYNOS5250)
 	struct jpeg_dev *dev = platform_get_drvdata(pdev);
 
-	if (dev->ctx) {
-		dev->vb2->suspend(dev->alloc_ctx);
-		clk_disable(dev->clk);
-	}
-#if defined(CONFIG_BUSFREQ_OPP) || defined(CONFIG_BUSFREQ_LOCK_WRAPPER)
-	/* lock bus frequency */
-	dev_unlock(dev->bus_dev, &pdev->dev);
+#if defined(CONFIG_MACH_P11) || defined(CONFIG_MACH_P10)
+	return 0;
 #endif
-#else
+
+#ifdef CONFIG_PM_RUNTIME
 	pm_runtime_put_sync(&pdev->dev);
 #endif
-#endif
+	/* clock disable */
+	clk_disable(dev->clk);
 	return 0;
 }
 
 static int jpeg_resume(struct platform_device *pdev)
 {
-#ifdef CONFIG_PM_RUNTIME
-#if defined (CONFIG_CPU_EXYNOS5250)
 	struct jpeg_dev *dev = platform_get_drvdata(pdev);
 
-	if (dev->ctx) {
-	clk_enable(dev->clk);
-		dev->vb2->resume(dev->alloc_ctx);
-	}
-#else
-	pm_runtime_get_sync(&pdev->dev);
+#if defined(CONFIG_MACH_P11) || defined(CONFIG_MACH_P10)
+	return 0;
 #endif
+
+	/* clock enable */
+	clk_enable(dev->clk);
+#ifdef CONFIG_PM_RUNTIME
+	pm_runtime_get_sync(&pdev->dev);
 #endif
 	return 0;
 }
@@ -1022,13 +995,16 @@ static int jpeg_runtime_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct jpeg_dev *jpeg_drv = platform_get_drvdata(pdev);
-#if defined(CONFIG_BUSFREQ_OPP) || defined(CONFIG_BUSFREQ_LOCK_WRAPPER)
+
+#if defined(CONFIG_MACH_P11) || defined(CONFIG_MACH_P10)
+	return 0;
+#endif
+
+#ifdef CONFIG_BUSFREQ_OPP
 	/* lock bus frequency */
 	dev_unlock(jpeg_drv->bus_dev, dev);
 #endif
 	jpeg_drv->vb2->suspend(jpeg_drv->alloc_ctx);
-	/* clock disable */
-	clk_disable(jpeg_drv->clk);
 	return 0;
 }
 
@@ -1036,11 +1012,15 @@ static int jpeg_runtime_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct jpeg_dev *jpeg_drv = platform_get_drvdata(pdev);
-#if defined(CONFIG_BUSFREQ_OPP) || defined(CONFIG_BUSFREQ_LOCK_WRAPPER)
-	/* lock bus frequency */
-	dev_lock(jpeg_drv->bus_dev, &jpeg_drv->plat_dev->dev, BUSFREQ_400MHZ);
+
+#if defined(CONFIG_MACH_P11) || defined(CONFIG_MACH_P10)
+	return 0;
 #endif
-	clk_enable(jpeg_drv->clk);
+
+#ifdef CONFIG_BUSFREQ_OPP
+	/* lock bus frequency */
+	dev_lock(jpeg_drv->bus_dev, dev, BUSFREQ_400MHZ);
+#endif
 	jpeg_drv->vb2->resume(jpeg_drv->alloc_ctx);
 	return 0;
 }
@@ -1057,24 +1037,15 @@ static const struct dev_pm_ops jpeg_pm_ops = {
 static struct platform_driver jpeg_driver = {
 	.probe		= jpeg_probe,
 	.remove		= jpeg_remove,
-#if defined (CONFIG_CPU_EXYNOS5250)
-	.suspend	= jpeg_suspend,
-	.resume		= jpeg_resume,
-#else
 #ifndef CONFIG_PM_RUNTIME
 	.suspend	= jpeg_suspend,
 	.resume		= jpeg_resume,
-#endif
 #endif
 	.driver		= {
 		.owner	= THIS_MODULE,
 		.name	= JPEG_NAME,
 #ifdef CONFIG_PM_RUNTIME
-#if defined (CONFIG_CPU_EXYNOS5250)
-		.pm = NULL,
-#else
 		.pm = &jpeg_pm_ops,
-#endif
 #else
 		.pm = NULL,
 #endif

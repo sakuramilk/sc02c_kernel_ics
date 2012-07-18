@@ -464,8 +464,9 @@ err_alloc_elvss:
 		kfree(lcd->elvss_table[i-1]);
 		i--;
 	}
-	kfree(lcd->elvss_table);
 err_alloc_elvss_table:
+	kfree(lcd->elvss_table);
+
 	return ret;
 }
 
@@ -504,8 +505,9 @@ err_alloc_gamma:
 		kfree(lcd->gamma_table[i-1]);
 		i--;
 	}
-	kfree(lcd->gamma_table);
 err_alloc_gamma_table:
+	kfree(lcd->gamma_table);
+
 	return ret;
 }
 #endif
@@ -934,8 +936,7 @@ static int s6e8ax0_probe(struct device *dev)
 
 	if (lcd->connected) {
 		ret = init_gamma_table(lcd);
-		if (lcd->support_elvss)
-			ret += init_elvss_table(lcd);
+		ret += init_elvss_table(lcd);
 
 		if (ret) {
 			lcd->gamma_table = (unsigned char **)gamma22_table_sm2;

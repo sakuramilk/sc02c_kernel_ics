@@ -975,6 +975,7 @@ int fimc_s_fmt_vid_capture(struct file *file, void *fh, struct v4l2_format *f)
 			fimc_calc_frame_ratio(ctrl, cap);
 		}
 #endif
+
 		if (!(mbus_fmt->width && mbus_fmt->height)) {
 			mbus_fmt->width = cap->fmt.width;
 			mbus_fmt->height = cap->fmt.height;
@@ -1558,8 +1559,11 @@ int fimc_s_ctrl_capture(void *fh, struct v4l2_control *c)
 #if defined(CONFIG_VIDEO_HD_SUPPORT)
 		printk(KERN_INFO "%s: CAMERA_SENSOR_MODE=%d\n",
 				__func__, c->value);
-		if (!ctrl->cam->initialized)
-			ret = fimc_init_camera(ctrl);
+#ifdef CONFIG_VIDEO_S5K5CCGX_P2
+		if ((fimc->active_camera == 0) && (c->value < 2))
+#endif /* CONFIG_VIDEO_S5K5CCGX_P2 */
+			if (!ctrl->cam->initialized)
+				ret = fimc_init_camera(ctrl);
 #endif /* CONFIG_VIDEO_HD_SUPPORT */
 		break;
 

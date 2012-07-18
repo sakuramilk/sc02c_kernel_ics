@@ -14,8 +14,6 @@
 
 #ifdef CONFIG_BROADCOM_WIFI_RESERVED_MEM
 
-#define WLAN_STATIC_SCAN_BUF0		5
-#define WLAN_STATIC_SCAN_BUF1		6
 #define PREALLOC_WLAN_SEC_NUM		4
 #define PREALLOC_WLAN_BUF_NUM		160
 #define PREALLOC_WLAN_SECTION_HEADER	24
@@ -46,16 +44,11 @@ static struct wlan_mem_prealloc wlan_mem_array[PREALLOC_WLAN_SEC_NUM] = {
 	{NULL, (WLAN_SECTION_SIZE_3 + PREALLOC_WLAN_SECTION_HEADER)}
 };
 
-void *wlan_static_scan_buf0;
-void *wlan_static_scan_buf1;
 static void *brcm_wlan_mem_prealloc(int section, unsigned long size)
 {
 	if (section == PREALLOC_WLAN_SEC_NUM)
 		return wlan_static_skb;
-	if (section == WLAN_STATIC_SCAN_BUF0)
-		return wlan_static_scan_buf0;	
-	if (section == WLAN_STATIC_SCAN_BUF1)
-		return wlan_static_scan_buf1;	
+
 	if ((section < 0) || (section > PREALLOC_WLAN_SEC_NUM))
 		return NULL;
 
@@ -93,14 +86,7 @@ static int brcm_init_wlan_mem(void)
 		if (!wlan_mem_array[i].mem_ptr)
 			goto err_mem_alloc;
 	}
-	wlan_static_scan_buf0 = kmalloc (65536, GFP_KERNEL);
-	if(!wlan_static_scan_buf0)		
-		goto err_mem_alloc;
-	wlan_static_scan_buf1 = kmalloc (65536, GFP_KERNEL);
-	if(!wlan_static_scan_buf1)		
-		goto err_mem_alloc;
-
-	printk("%s: WIFI MEM Allocated\n", __FUNCTION__);
+	printk(KERN_INFO"%s: WIFI MEM Allocated\n", __func__);
 	return 0;
 
  err_mem_alloc:

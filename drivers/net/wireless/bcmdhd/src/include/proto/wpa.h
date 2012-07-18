@@ -116,14 +116,12 @@ typedef BWL_PRE_PACKED_STRUCT struct
 #define WPA_CIPHER_BIP		6
 #define WPA_CIPHER_TPK		7
 
-
-#ifdef BCMWAPI_WAI
+#ifdef BCMWAPI_WPI
 #define WAPI_CIPHER_NONE	WPA_CIPHER_NONE
 #define WAPI_CIPHER_SMS4	11
 
 #define WAPI_CSE_WPI_SMS4	1
-#endif /* BCMWAPI_WAI */
-
+#endif /* BCMWAPI_WPI */
 #define IS_WPA_CIPHER(cipher)	((cipher) == WPA_CIPHER_NONE || \
 				 (cipher) == WPA_CIPHER_WEP_40 || \
 				 (cipher) == WPA_CIPHER_WEP_104 || \
@@ -131,7 +129,6 @@ typedef BWL_PRE_PACKED_STRUCT struct
 				 (cipher) == WPA_CIPHER_AES_OCB || \
 				 (cipher) == WPA_CIPHER_AES_CCM || \
 				 (cipher) == WPA_CIPHER_TPK)
-
 #ifdef BCMWAPI_WAI
 #define IS_WAPI_CIPHER(cipher)	((cipher) == WAPI_CIPHER_NONE || \
 				 (cipher) == WAPI_CSE_WPI_SMS4)

@@ -399,6 +399,8 @@ static int __init exynos_dma_init(void)
 		exynos_device_pdma1.dev.platform_data = &exynos5210_pdma1_pdata;
 	}
 
-	return platform_add_devices(exynos_dmacs, ARRAY_SIZE(exynos_dmacs));
+	platform_add_devices(exynos_dmacs, ARRAY_SIZE(exynos_dmacs));
+
+	return 0;
 }
 arch_initcall(exynos_dma_init);

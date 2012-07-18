@@ -547,8 +547,7 @@ struct hci_conn *hci_connect(struct hci_dev *hdev, int type,
 
 	if (acl->state == BT_OPEN || acl->state == BT_CLOSED) {
 		ie = hci_inquiry_cache_lookup(acl->hdev, &acl->dst);
-		if (ie && (!ie->data.ssp_mode || !acl->hdev->ssp_mode) &&
-				((ie->data.dev_class[1] & 0x1f) != 0x05)) {
+		if (ie && (!ie->data.ssp_mode || !acl->hdev->ssp_mode)) {
 			__u8 auth = AUTH_ENABLED;
 			hci_send_cmd(hdev, HCI_OP_WRITE_AUTH_ENABLE, 1, &auth);
 		}

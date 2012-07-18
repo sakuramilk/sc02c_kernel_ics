@@ -14,4 +14,3 @@ obj-$(CONFIG_DRM_EXYNOS_DMABUF) += exynos_drm_dmabuf.o
 obj-$(CONFIG_DRM_EXYNOS_FIMD) += exynos_drm_fimd.o
 obj-$(CONFIG_DRM_EXYNOS_HDMI) += exynos_hdmi.o exynos_mixer.o exynos_ddc.o \
 				 exynos_hdmiphy.o exynos_drm_hdmi.o
-obj-$(CONFIG_DRM_EXYNOS_VIDI) += exynos_drm_vidi.o
