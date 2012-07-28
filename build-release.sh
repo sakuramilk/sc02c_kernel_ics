@@ -45,6 +45,8 @@ mkdir $RELEASE_DIR/AOSP
 cp -v ./out/AOSP/bin/* $RELEASE_DIR/AOSP
 
 # build for multiboot
+# not implemet yet...
+exit 0 
 
 cd ../sc02c_initramfs
 git checkout ics_multiboot
