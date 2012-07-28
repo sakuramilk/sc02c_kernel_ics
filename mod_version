@@ -1,7 +1,7 @@
 ###########################################################
 # set kernel version
 ###########################################################
-TARGET_DEVICE=SC02C-ICS
+TARGET_DEVICE=SC02C-JB
 BUILD_MOD=KBC
 BUILD_VERSION=V3.0.0
 
