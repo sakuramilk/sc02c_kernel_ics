@@ -107,13 +107,19 @@ static int g_nMajor;
 #endif
 
 #ifdef CONFIG_FEATURE_TGS2
+#if defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_TARGET_LOCALE_NTT)
 #define VIBRATOR_LEVEL_MAX		9
 #define VIBRATOR_LEVEL_MIN		0
-#define VIBRATOR_LEVEL_DEFAULT	7
-#define VIBRATOR_DUTY_DEFAULT	40000
+#define VIBRATOR_LEVEL_DEFAULT		7
 static const int vibrator_duty_levels[] = { 26000, 28000, 30000, 32000, 34000, 36000, 38000, 40000, 42000, 44000 };
+#else
+#define VIBRATOR_LEVEL_MAX		6
+#define VIBRATOR_LEVEL_MIN		0
+#define VIBRATOR_LEVEL_DEFAULT		6
+static const int vibrator_duty_levels[] = { 26000, 28000, 30000, 32000, 34000, 36000, 38000 };
+#endif
 static int vibrator_level = VIBRATOR_LEVEL_DEFAULT;
-int tspdrv_duty = VIBRATOR_DUTY_DEFAULT;
+extern void vibetonz_update_duty(int duty);
 #endif
 
 /* File IO */
@@ -164,7 +170,7 @@ static ssize_t store_vibrator_level(struct device *dev,
 			vibrator_level = VIBRATOR_LEVEL_MAX;
 		else if (vibrator_level < VIBRATOR_LEVEL_MIN)
 			vibrator_level = VIBRATOR_LEVEL_MIN;
-		tspdrv_duty = vibrator_duty_levels[vibrator_level];
+		vibetonz_update_duty(vibrator_duty_levels[vibrator_level]);
 
 	} else {
 		printk(KERN_ERR "tspdrv: invalid vibrator level\n");

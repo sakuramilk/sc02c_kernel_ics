@@ -2555,6 +2555,15 @@ static struct max8997_motor_data max8997_motor = {
 	.motor_en = motor_en,
 	.pwm_id = 1,
 };
+#elif defined(CONFIG_TARGET_LOCALE_NTT)
+static struct max8997_motor_data max8997_motor = {
+	.max_timeout = 10000,
+	.duty = 40000,
+	.period = 44138,
+	.init_hw = NULL,
+	.motor_en = NULL,
+	.pwm_id = 1,
+};
 #else
 static struct max8997_motor_data max8997_motor = {
 	.max_timeout = 10000,
