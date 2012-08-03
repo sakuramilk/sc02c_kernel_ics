@@ -2,15 +2,23 @@
 
 KERNEL_DIR=$PWD
 INITRAMFS_SRC_DIR=../sc02c_initramfs
-INITRAMFS_TMP_DIR=/tmp/sc02c_initramfs
 
+if [ -z "$INITRAMFS_TMP_DIR" ]; then
+	INITRAMFS_TMP_DIR=/tmp/sc02c_initramfs
+fi
 
 cpoy_initramfs()
 {
+  echo copy to $INITRAMFS_TMP_DIR ... $(dirname $INITRAMFS_TMP_DIR)
+  
+  if [ ! -d $(dirname $INITRAMFS_TMP_DIR) ]; then
+	mkdir -p $(dirname $INITRAMFS_TMP_DIR)
+  fi
+
   if [ -d $INITRAMFS_TMP_DIR ]; then
     rm -rf $INITRAMFS_TMP_DIR  
   fi
-  cp -a $INITRAMFS_SRC_DIR $(dirname $INITRAMFS_TMP_DIR)
+  cp -a $INITRAMFS_SRC_DIR $INITRAMFS_TMP_DIR
   rm -rf $INITRAMFS_TMP_DIR/.git
   find $INITRAMFS_TMP_DIR -name .gitignore | xargs rm
 }
