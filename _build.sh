@@ -67,6 +67,9 @@ fi
 # generate LOCALVERSION
 . mod_version
 
+if [ -n "$BUILD_NUMBER" ]; then
+export KBUILD_BUILD_VERSION="$BUILD_NUMBER"
+
 # check and get compiler
 . cross_compile
 
