@@ -69,7 +69,7 @@ fi
 
 if [ -n "$BUILD_NUMBER" ]; then
 export KBUILD_BUILD_VERSION="$BUILD_NUMBER"
-
+fi
 # check and get compiler
 . cross_compile
 
