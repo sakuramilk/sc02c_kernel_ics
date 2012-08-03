@@ -1,3 +1,9 @@
+assert(getprop("ro.product.device") == "galaxys2" || getprop("ro.build.product") == "galaxys2" || 
+       getprop("ro.product.device") == "GT-I9100" || getprop("ro.build.product") == "GT-I9100" || 
+       getprop("ro.product.device") == "GT-I9100M" || getprop("ro.build.product") == "GT-I9100M" || 
+       getprop("ro.product.device") == "GT-I9100P" || getprop("ro.build.product") == "GT-I9100P" || 
+       getprop("ro.product.device") == "SC-02C" || getprop("ro.build.product") == "SC-02C" || 
+       getprop("ro.product.device") == "GT-I9100T" || getprop("ro.build.product") == "GT-I9100T");
 ui_print("");
 ui_print("");
 ui_print("------------------------------------------------");
